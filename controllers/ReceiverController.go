@@ -30,10 +30,18 @@ func (c *ReceiverController) onStatus(message *api.CastMessage) {
 	spew.Dump("Got status message", message)
 }
 
+type StatusResponse struct {
+	Status *ReceiverStatus `json:"status,omitempty"`
+}
+
+type ReceiverStatus struct {
+	Volume *VolumePayload `json:"volume,omitempty"`
+}
+
 type VolumePayload struct {
 	castv2.PayloadHeaders
-	Volume *float64 `json:"volume,omitempty"`
-	Mute   *bool    `json:"mute,omitempty"`
+	Level *float64 `json:"level,omitempty"`
+	Muted *bool    `json:"muted,omitempty"`
 }
 
 func (c *ReceiverController) GetStatus(timeout time.Duration) (*api.CastMessage, error) {
@@ -41,7 +49,6 @@ func (c *ReceiverController) GetStatus(timeout time.Duration) (*api.CastMessage,
 }
 
 func (c *ReceiverController) SetVolume(volume *VolumePayload, timeout time.Duration) (*api.CastMessage, error) {
-	volume.Type = "SET_VOLUME"
 	return c.channel.Request(volume, timeout)
 }
 
@@ -52,9 +59,9 @@ func (c *ReceiverController) GetVolume(timeout time.Duration) (*VolumePayload, e
 		return nil, err
 	}
 
-	var volume VolumePayload
+	response := StatusResponse{}
 
-	err = json.Unmarshal([]byte(*message.PayloadUtf8), &volume)
+	err = json.Unmarshal([]byte(*message.PayloadUtf8), &response)
 
-	return &volume, err
+	return response.Status.Volume, err
 }
