@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"encoding/json"
+	"log"
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
@@ -12,13 +13,15 @@ import (
 type ReceiverController struct {
 	interval time.Duration
 	channel  *cast.Channel
+	Incoming chan *StatusResponse
 }
 
 var getStatus = cast.PayloadHeaders{Type: "GET_STATUS"}
 
 func NewReceiverController(client *cast.Client, sourceId, destinationId string) *ReceiverController {
 	controller := &ReceiverController{
-		channel: client.NewChannel(sourceId, destinationId, "urn:x-cast:com.google.cast.receiver"),
+		channel:  client.NewChannel(sourceId, destinationId, "urn:x-cast:com.google.cast.receiver"),
+		Incoming: make(chan *StatusResponse, 0),
 	}
 
 	controller.channel.OnMessage("RECEIVER_STATUS", controller.onStatus)
@@ -28,6 +31,22 @@ func NewReceiverController(client *cast.Client, sourceId, destinationId string) 
 
 func (c *ReceiverController) onStatus(message *api.CastMessage) {
 	spew.Dump("Got status message", message)
+
+	response := &StatusResponse{}
+
+	err := json.Unmarshal([]byte(*message.PayloadUtf8), response)
+
+	if err != nil {
+		log.Printf("Failed to unmarshal status message:%s - %s", err, *message.PayloadUtf8)
+		return
+	}
+
+	select {
+	case c.Incoming <- response:
+	default:
+		log.Printf("Incoming status, but we aren't listening. %v", response)
+	}
+
 }
 
 type StatusResponse struct {
@@ -35,11 +54,11 @@ type StatusResponse struct {
 }
 
 type ReceiverStatus struct {
+	cast.PayloadHeaders
 	Volume *VolumePayload `json:"volume,omitempty"`
 }
 
 type VolumePayload struct {
-	cast.PayloadHeaders
 	Level *float64 `json:"level,omitempty"`
 	Muted *bool    `json:"muted,omitempty"`
 }
@@ -49,7 +68,9 @@ func (c *ReceiverController) GetStatus(timeout time.Duration) (*api.CastMessage,
 }
 
 func (c *ReceiverController) SetVolume(volume *VolumePayload, timeout time.Duration) (*api.CastMessage, error) {
-	return c.channel.Request(volume, timeout)
+	return c.channel.Request(&ReceiverStatus{
+		cast.PayloadHeaders{Type: "SET_VOLUME"}, volume,
+	}, timeout)
 }
 
 func (c *ReceiverController) GetVolume(timeout time.Duration) (*VolumePayload, error) {
