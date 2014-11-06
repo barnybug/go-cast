@@ -9,7 +9,6 @@ import (
 
 	"code.google.com/p/gogoprotobuf/proto"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/ninjasphere/go-castv2/api"
 )
 
@@ -63,7 +62,7 @@ func NewClient(host net.IP, port int) (*Client, error) {
 				log.Fatalf("Failed to unmarshal CastMessage: %s", err)
 			}
 
-			spew.Dump("Message!", message)
+			//spew.Dump("Message!", message)
 
 			var headers PayloadHeaders
 
@@ -117,7 +116,7 @@ func (c *Client) Send(message *api.CastMessage) error {
 		return err
 	}
 
-	spew.Dump("Writing", message)
+	//spew.Dump("Writing", message)
 
 	_, err = c.conn.Write(&data)
 
