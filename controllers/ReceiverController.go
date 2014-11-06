@@ -5,7 +5,6 @@ import (
 	"log"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/ninjasphere/go-cast"
 	"github.com/ninjasphere/go-cast/api"
 )
@@ -30,7 +29,7 @@ func NewReceiverController(client *cast.Client, sourceId, destinationId string) 
 }
 
 func (c *ReceiverController) onStatus(message *api.CastMessage) {
-	spew.Dump("Got status message", message)
+	//spew.Dump("Got status message", message)
 
 	response := &StatusResponse{}
 
@@ -43,22 +42,37 @@ func (c *ReceiverController) onStatus(message *api.CastMessage) {
 
 	select {
 	case c.Incoming <- response:
-	default:
+	case <-time.After(time.Second * 1):
 		log.Printf("Incoming status, but we aren't listening. %v", response)
 	}
 
 }
 
 type StatusResponse struct {
+	cast.PayloadHeaders
 	Status *ReceiverStatus `json:"status,omitempty"`
 }
 
 type ReceiverStatus struct {
 	cast.PayloadHeaders
-	Volume *VolumePayload `json:"volume,omitempty"`
+	Applications []*ApplicationSession `json:"applications"`
+	Volume       *Volume               `json:"volume,omitempty"`
 }
 
-type VolumePayload struct {
+type ApplicationSession struct {
+	AppID       *string      `json:"appId,omitempty"`
+	DisplayName *string      `json:"displayName,omitempty"`
+	Namespaces  []*Namespace `json:"namespaces"`
+	SessionID   *string      `json:"sessionId,omitempty"`
+	StatusText  *string      `json:"statusText,omitempty"`
+	TransportId *string      `json:"transportId,omitempty"`
+}
+
+type Namespace struct {
+	Name string `json:"name"`
+}
+
+type Volume struct {
 	Level *float64 `json:"level,omitempty"`
 	Muted *bool    `json:"muted,omitempty"`
 }
@@ -67,13 +81,14 @@ func (c *ReceiverController) GetStatus(timeout time.Duration) (*api.CastMessage,
 	return c.channel.Request(&getStatus, timeout)
 }
 
-func (c *ReceiverController) SetVolume(volume *VolumePayload, timeout time.Duration) (*api.CastMessage, error) {
+func (c *ReceiverController) SetVolume(volume *Volume, timeout time.Duration) (*api.CastMessage, error) {
 	return c.channel.Request(&ReceiverStatus{
-		cast.PayloadHeaders{Type: "SET_VOLUME"}, volume,
+		PayloadHeaders: cast.PayloadHeaders{Type: "SET_VOLUME"},
+		Volume:         volume,
 	}, timeout)
 }
 
-func (c *ReceiverController) GetVolume(timeout time.Duration) (*VolumePayload, error) {
+func (c *ReceiverController) GetVolume(timeout time.Duration) (*Volume, error) {
 	message, err := c.GetStatus(timeout)
 
 	if err != nil {
