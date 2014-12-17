@@ -2,9 +2,11 @@ package controllers
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/ninjasphere/go-castv2"
 	"github.com/ninjasphere/go-castv2/api"
 )
@@ -12,7 +14,7 @@ import (
 type ReceiverController struct {
 	interval time.Duration
 	channel  *castv2.Channel
-	Incoming chan *StatusResponse
+	Incoming chan *ReceiverStatus
 }
 
 var getStatus = castv2.PayloadHeaders{Type: "GET_STATUS"}
@@ -20,7 +22,7 @@ var getStatus = castv2.PayloadHeaders{Type: "GET_STATUS"}
 func NewReceiverController(client *castv2.Client, sourceId, destinationId string) *ReceiverController {
 	controller := &ReceiverController{
 		channel:  client.NewChannel(sourceId, destinationId, "urn:x-cast:com.google.cast.receiver"),
-		Incoming: make(chan *StatusResponse, 0),
+		Incoming: make(chan *ReceiverStatus, 0),
 	}
 
 	controller.channel.OnMessage("RECEIVER_STATUS", controller.onStatus)
@@ -29,7 +31,7 @@ func NewReceiverController(client *castv2.Client, sourceId, destinationId string
 }
 
 func (c *ReceiverController) onStatus(message *api.CastMessage) {
-	//spew.Dump("Got status message", message)
+	spew.Dump("Got status message", message)
 
 	response := &StatusResponse{}
 
@@ -41,9 +43,10 @@ func (c *ReceiverController) onStatus(message *api.CastMessage) {
 	}
 
 	select {
-	case c.Incoming <- response:
-	case <-time.After(time.Second * 1):
-		log.Printf("Incoming status, but we aren't listening. %v", response)
+	case c.Incoming <- response.Status:
+		log.Printf("Delivered status")
+	case <-time.After(time.Second):
+		log.Printf("Incoming status, but we aren't listening. %v", response.Status)
 	}
 
 }
@@ -57,6 +60,19 @@ type ReceiverStatus struct {
 	castv2.PayloadHeaders
 	Applications []*ApplicationSession `json:"applications"`
 	Volume       *Volume               `json:"volume,omitempty"`
+}
+
+func (s *ReceiverStatus) GetSessionByNamespace(namespace string) *ApplicationSession {
+
+	for _, app := range s.Applications {
+		for _, ns := range app.Namespaces {
+			if ns.Name == namespace {
+				return app
+			}
+		}
+	}
+
+	return nil
 }
 
 type ApplicationSession struct {
@@ -77,8 +93,22 @@ type Volume struct {
 	Muted *bool    `json:"muted,omitempty"`
 }
 
-func (c *ReceiverController) GetStatus(timeout time.Duration) (*api.CastMessage, error) {
-	return c.channel.Request(&getStatus, timeout)
+func (c *ReceiverController) GetStatus(timeout time.Duration) (*ReceiverStatus, error) {
+	message, err := c.channel.Request(&getStatus, timeout)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to get receiver status: %s", err)
+	}
+	c.onStatus(message)
+
+	response := &StatusResponse{}
+
+	err = json.Unmarshal([]byte(*message.PayloadUtf8), response)
+
+	if err != nil {
+		return nil, fmt.Errorf("Failed to unmarshal status message:%s - %s", err, *message.PayloadUtf8)
+	}
+
+	return response.Status, nil
 }
 
 func (c *ReceiverController) SetVolume(volume *Volume, timeout time.Duration) (*api.CastMessage, error) {
@@ -89,15 +119,11 @@ func (c *ReceiverController) SetVolume(volume *Volume, timeout time.Duration) (*
 }
 
 func (c *ReceiverController) GetVolume(timeout time.Duration) (*Volume, error) {
-	message, err := c.GetStatus(timeout)
+	status, err := c.GetStatus(timeout)
 
 	if err != nil {
 		return nil, err
 	}
 
-	response := StatusResponse{}
-
-	err = json.Unmarshal([]byte(*message.PayloadUtf8), &response)
-
-	return response.Status.Volume, err
+	return status.Volume, err
 }

@@ -96,7 +96,7 @@ func (c *Client) NewChannel(sourceId, destinationId, namespace string) *Channel 
 	channel := &Channel{
 		client:        c,
 		sourceId:      sourceId,
-		destinationId: destinationId,
+		DestinationId: destinationId,
 		namespace:     namespace,
 		listeners:     make([]channelListener, 0),
 		inFlight:      make(map[int]chan *api.CastMessage),
