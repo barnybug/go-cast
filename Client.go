@@ -13,6 +13,7 @@ import (
 )
 
 type Client struct {
+	realConn *tls.Conn
 	conn     *packetStream
 	channels []*Channel
 }
@@ -45,6 +46,7 @@ func NewClient(host net.IP, port int) (*Client, error) {
 	wrapper := NewPacketStream(conn)
 
 	client := &Client{
+		realConn: conn,
 		conn:     wrapper,
 		channels: make([]*Channel, 0),
 	}
@@ -90,6 +92,10 @@ func NewClient(host net.IP, port int) (*Client, error) {
 	}()*/
 
 	return client, nil
+}
+
+func (c *Client) Close() {
+	c.realConn.Close()
 }
 
 func (c *Client) NewChannel(sourceId, destinationId, namespace string) *Channel {
