@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/armon/mdns"
 	"github.com/davecgh/go-spew/spew"
+	"github.com/hashicorp/mdns"
 	"github.com/ninjasphere/go-cast"
 	"github.com/ninjasphere/go-cast/controllers"
 )
@@ -17,7 +17,7 @@ import (
 // A simple example, showing how to find a Chromecast using mdns, and request its status.
 func main() {
 
-	castService := "_googlecast._tcp.local"
+	castService := "_googlecast._tcp"
 
 	// Make a channel for results and start listening
 	entriesCh := make(chan *mdns.ServiceEntry, 4)
@@ -55,7 +55,6 @@ func main() {
 	go func() {
 		mdns.Query(&mdns.QueryParam{
 			Service: castService,
-			Domain:  "local",
 			Timeout: time.Second * 30,
 			Entries: entriesCh,
 		})
