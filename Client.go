@@ -7,7 +7,7 @@ import (
 	"log"
 	"net"
 
-	"code.google.com/p/gogoprotobuf/proto"
+	"github.com/gogo/protobuf"
 
 	"github.com/ninjasphere/go-castv2/api"
 )
