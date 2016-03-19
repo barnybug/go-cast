@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/ninjasphere/go-castv2"
-	"github.com/ninjasphere/go-castv2/api"
+	"github.com/barnybug/go-castv2"
+	"github.com/barnybug/go-castv2/api"
 )
 
 type MediaController struct {
