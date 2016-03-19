@@ -3,8 +3,8 @@ package controllers
 import (
 	"time"
 
-	"github.com/ninjasphere/go-cast"
-	"github.com/ninjasphere/go-cast/api"
+	"github.com/barnybug/go-cast"
+	"github.com/barnybug/go-cast/api"
 )
 
 // TODO: Send pings and wait for pongs - https://github.com/thibauts/node-cast-client/blob/master/lib/controllers/heartbeat.js

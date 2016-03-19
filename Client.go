@@ -9,7 +9,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 
-	"github.com/ninjasphere/go-cast/api"
+	"github.com/barnybug/go-cast/api"
 )
 
 type Client struct {

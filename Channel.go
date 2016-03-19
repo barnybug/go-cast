@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/ninjasphere/go-cast/api"
+	"github.com/barnybug/go-cast/api"
 )
 
 type Channel struct {

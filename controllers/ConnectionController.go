@@ -1,6 +1,6 @@
 package controllers
 
-import "github.com/ninjasphere/go-cast"
+import "github.com/barnybug/go-cast"
 
 type connectionController struct {
 	channel *cast.Channel

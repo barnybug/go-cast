@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/ninjasphere/go-cast"
-	"github.com/ninjasphere/go-cast/api"
+	"github.com/barnybug/go-cast"
+	"github.com/barnybug/go-cast/api"
 )
 
 type ReceiverController struct {
