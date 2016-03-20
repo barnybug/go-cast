@@ -1,16 +1,15 @@
-package cast
+package net
 
 import (
-	"encoding/json"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/barnybug/go-cast/api"
+	"github.com/barnybug/go-cast/log"
 )
 
 type Channel struct {
-	client        *Client
+	conn          *Connection
 	sourceId      string
 	DestinationId string
 	namespace     string
@@ -24,14 +23,23 @@ type channelListener struct {
 	callback     func(*api.CastMessage)
 }
 
-type hasRequestId interface {
+type Payload interface {
 	setRequestId(id int)
 	getRequestId() int
 }
 
-func (c *Channel) message(message *api.CastMessage, headers *PayloadHeaders) {
+func NewChannel(conn *Connection, sourceId, destinationId, namespace string) *Channel {
+	return &Channel{
+		conn:          conn,
+		sourceId:      sourceId,
+		DestinationId: destinationId,
+		namespace:     namespace,
+		listeners:     make([]channelListener, 0),
+		inFlight:      make(map[int]chan *api.CastMessage),
+	}
+}
 
-	//	spew.Dump("XXX", message, c)
+func (c *Channel) Message(message *api.CastMessage, headers *PayloadHeaders) {
 
 	if *message.DestinationId != "*" && (*message.SourceId != c.DestinationId || *message.DestinationId != c.sourceId || *message.Namespace != c.namespace) {
 		return
@@ -66,38 +74,17 @@ func (c *Channel) OnMessage(responseType string, cb func(*api.CastMessage)) {
 }
 
 func (c *Channel) Send(payload interface{}) error {
-
-	payloadJson, err := json.Marshal(payload)
-	if err != nil {
-		return err
-	}
-	payloadString := string(payloadJson)
-
-	message := &api.CastMessage{
-		ProtocolVersion: api.CastMessage_CASTV2_1_0.Enum(),
-		SourceId:        &c.sourceId,
-		DestinationId:   &c.DestinationId,
-		Namespace:       &c.namespace,
-		PayloadType:     api.CastMessage_STRING.Enum(),
-		PayloadUtf8:     &payloadString,
-	}
-
-	return c.client.Send(message)
+	return c.conn.Send(payload, c.sourceId, c.DestinationId, c.namespace)
 }
 
-func (c *Channel) Request(payload hasRequestId, timeout time.Duration) (*api.CastMessage, error) {
-
-	// TODO: Need locking here
+func (c *Channel) Request(payload Payload, timeout time.Duration) (*api.CastMessage, error) {
 	c.requestId++
 
 	payload.setRequestId(c.requestId)
-
 	response := make(chan *api.CastMessage)
-
 	c.inFlight[payload.getRequestId()] = response
 
 	err := c.Send(payload)
-
 	if err != nil {
 		delete(c.inFlight, payload.getRequestId())
 		return nil, err
@@ -110,5 +97,4 @@ func (c *Channel) Request(payload hasRequestId, timeout time.Duration) (*api.Cas
 		delete(c.inFlight, payload.getRequestId())
 		return nil, fmt.Errorf("Call to cast channel %s - timed out after %d seconds", c.DestinationId, timeout/time.Second)
 	}
-
 }

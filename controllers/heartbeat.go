@@ -3,8 +3,11 @@ package controllers
 import (
 	"time"
 
-	"github.com/barnybug/go-cast"
+	"golang.org/x/net/context"
+
 	"github.com/barnybug/go-cast/api"
+	"github.com/barnybug/go-cast/log"
+	"github.com/barnybug/go-cast/net"
 )
 
 // TODO: Send pings and wait for pongs - https://github.com/thibauts/node-cast-client/blob/master/lib/controllers/heartbeat.js
@@ -12,17 +15,17 @@ import (
 const interval = time.Second * 5
 const timeoutFactor = 3 // timeouts after 3 intervals
 
-type heartbeatController struct {
+type HeartbeatController struct {
 	ticker  *time.Ticker
-	channel *cast.Channel
+	channel *net.Channel
 }
 
-var ping = cast.PayloadHeaders{Type: "PING"}
-var pong = cast.PayloadHeaders{Type: "PONG"}
+var ping = net.PayloadHeaders{Type: "PING"}
+var pong = net.PayloadHeaders{Type: "PONG"}
 
-func NewHeartbeatController(client *cast.Client, sourceId, destinationId string) *heartbeatController {
-	controller := &heartbeatController{
-		channel: client.NewChannel(sourceId, destinationId, "urn:x-cast:com.google.cast.tp.heartbeat"),
+func NewHeartbeatController(conn *net.Connection, sourceId, destinationId string) *HeartbeatController {
+	controller := &HeartbeatController{
+		channel: conn.NewChannel(sourceId, destinationId, "urn:x-cast:com.google.cast.tp.heartbeat"),
 	}
 
 	controller.channel.OnMessage("PING", controller.onPing)
@@ -30,27 +33,33 @@ func NewHeartbeatController(client *cast.Client, sourceId, destinationId string)
 	return controller
 }
 
-func (c *heartbeatController) onPing(_ *api.CastMessage) {
+func (c *HeartbeatController) onPing(_ *api.CastMessage) {
 	c.channel.Send(pong)
 }
 
-func (c *heartbeatController) Start() {
-
+func (c *HeartbeatController) Start(ctx context.Context) {
 	if c.ticker != nil {
 		c.Stop()
 	}
 
 	c.ticker = time.NewTicker(interval)
 	go func() {
+	LOOP:
 		for {
-			<-c.ticker.C
-			c.channel.Send(ping)
+			select {
+			case <-c.ticker.C:
+				c.channel.Send(ping)
+			case <-ctx.Done():
+				break LOOP
+			}
 		}
+		log.Println("Heartbeat stopped")
 	}()
 
+	log.Println("Heartbeat started")
 }
 
-func (c *heartbeatController) Stop() {
+func (c *HeartbeatController) Stop() {
 
 	if c.ticker != nil {
 		c.ticker.Stop()

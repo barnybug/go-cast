@@ -3,25 +3,27 @@ package controllers
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
-	"github.com/barnybug/go-cast"
 	"github.com/barnybug/go-cast/api"
+	"github.com/barnybug/go-cast/log"
+	"github.com/barnybug/go-cast/net"
 )
 
 type ReceiverController struct {
 	interval time.Duration
-	channel  *cast.Channel
+	channel  *net.Channel
 	Incoming chan *ReceiverStatus
+	status   *ReceiverStatus
 }
 
-var getStatus = cast.PayloadHeaders{Type: "GET_STATUS"}
+var getStatus = net.PayloadHeaders{Type: "GET_STATUS"}
+var commandLaunch = net.PayloadHeaders{Type: "LAUNCH"}
+var commandStop = net.PayloadHeaders{Type: "STOP"}
 
-func NewReceiverController(client *cast.Client, sourceId, destinationId string) *ReceiverController {
+func NewReceiverController(conn *net.Connection, sourceId, destinationId string) *ReceiverController {
 	controller := &ReceiverController{
-		channel:  client.NewChannel(sourceId, destinationId, "urn:x-cast:com.google.cast.receiver"),
+		channel:  conn.NewChannel(sourceId, destinationId, "urn:x-cast:com.google.cast.receiver"),
 		Incoming: make(chan *ReceiverStatus, 0),
 	}
 
@@ -31,39 +33,38 @@ func NewReceiverController(client *cast.Client, sourceId, destinationId string) 
 }
 
 func (c *ReceiverController) onStatus(message *api.CastMessage) {
-	spew.Dump("Got status message", message)
-
 	response := &StatusResponse{}
-
 	err := json.Unmarshal([]byte(*message.PayloadUtf8), response)
-
 	if err != nil {
-		log.Printf("Failed to unmarshal status message:%s - %s", err, *message.PayloadUtf8)
+		log.Errorf("Failed to unmarshal status message:%s - %s", err, *message.PayloadUtf8)
 		return
 	}
 
+	c.status = response.Status
 	select {
 	case c.Incoming <- response.Status:
 		log.Printf("Delivered status")
 	case <-time.After(time.Second):
-		log.Printf("Incoming status, but we aren't listening. %v", response.Status)
 	}
-
 }
 
 type StatusResponse struct {
-	cast.PayloadHeaders
+	net.PayloadHeaders
 	Status *ReceiverStatus `json:"status,omitempty"`
 }
 
 type ReceiverStatus struct {
-	cast.PayloadHeaders
+	net.PayloadHeaders
 	Applications []*ApplicationSession `json:"applications"`
 	Volume       *Volume               `json:"volume,omitempty"`
 }
 
-func (s *ReceiverStatus) GetSessionByNamespace(namespace string) *ApplicationSession {
+type LaunchRequest struct {
+	net.PayloadHeaders
+	AppId string `json:"appId"`
+}
 
+func (s *ReceiverStatus) GetSessionByNamespace(namespace string) *ApplicationSession {
 	for _, app := range s.Applications {
 		for _, ns := range app.Namespaces {
 			if ns.Name == namespace {
@@ -71,8 +72,15 @@ func (s *ReceiverStatus) GetSessionByNamespace(namespace string) *ApplicationSes
 			}
 		}
 	}
-
 	return nil
+}
+
+func (s *ReceiverStatus) GetTransportId(namespace string) string {
+	app := s.GetSessionByNamespace(namespace)
+	if app != nil {
+		return *app.TransportId
+	}
+	return ""
 }
 
 type ApplicationSession struct {
@@ -101,11 +109,9 @@ func (c *ReceiverController) GetStatus(timeout time.Duration) (*ReceiverStatus, 
 	c.onStatus(message)
 
 	response := &StatusResponse{}
-
 	err = json.Unmarshal([]byte(*message.PayloadUtf8), response)
-
 	if err != nil {
-		return nil, fmt.Errorf("Failed to unmarshal status message:%s - %s", err, *message.PayloadUtf8)
+		return nil, fmt.Errorf("Failed to unmarshal status message: %s - %s", err, *message.PayloadUtf8)
 	}
 
 	return response.Status, nil
@@ -113,17 +119,33 @@ func (c *ReceiverController) GetStatus(timeout time.Duration) (*ReceiverStatus, 
 
 func (c *ReceiverController) SetVolume(volume *Volume, timeout time.Duration) (*api.CastMessage, error) {
 	return c.channel.Request(&ReceiverStatus{
-		PayloadHeaders: cast.PayloadHeaders{Type: "SET_VOLUME"},
+		PayloadHeaders: net.PayloadHeaders{Type: "SET_VOLUME"},
 		Volume:         volume,
 	}, timeout)
 }
 
 func (c *ReceiverController) GetVolume(timeout time.Duration) (*Volume, error) {
 	status, err := c.GetStatus(timeout)
-
 	if err != nil {
 		return nil, err
 	}
-
 	return status.Volume, err
+}
+
+func (c *ReceiverController) LaunchApp(appId string, timeout time.Duration) (*ReceiverStatus, error) {
+	message, err := c.channel.Request(&LaunchRequest{
+		PayloadHeaders: commandLaunch,
+		AppId:          appId,
+	}, timeout)
+
+	response := &StatusResponse{}
+	err = json.Unmarshal([]byte(*message.PayloadUtf8), response)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to unmarshal status message: %s - %s", err, *message.PayloadUtf8)
+	}
+	return response.Status, nil
+}
+
+func (c *ReceiverController) QuitApp(timeout time.Duration) (*api.CastMessage, error) {
+	return c.channel.Request(&commandStop, timeout)
 }
