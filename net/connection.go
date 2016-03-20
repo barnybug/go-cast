@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net"
 
 	"github.com/barnybug/go-cast/api"
@@ -61,7 +62,7 @@ func (c *Connection) ReceiveLoop() {
 		}
 
 		packet := make([]byte, length)
-		i, err := c.conn.Read(packet)
+		i, err := io.ReadFull(c.conn, packet)
 		if err != nil {
 			log.Printf("Failed to read packet: %s", err)
 			break
