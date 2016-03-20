@@ -68,13 +68,18 @@ func main() {
 		},
 		{
 			Name:   "quit",
-			Usage:  "close current app on chromecast",
+			Usage:  "close current app on Chromecast",
 			Action: cliCommand,
 		},
 		{
 			Name:   "script",
 			Usage:  "Run the set of commands passed to stdin",
 			Action: scriptCommand,
+		},
+		{
+			Name:   "status",
+			Usage:  "Get status of the Chromecast",
+			Action: statusCommand,
 		},
 	}
 	app.Run(os.Args)
@@ -124,6 +129,28 @@ func scriptCommand(c *cli.Context) {
 
 	for _, args := range commands {
 		runCommand(client, args[0], args[1:])
+	}
+}
+
+func statusCommand(c *cli.Context) {
+	log.Debug = c.GlobalBool("debug")
+	client := connect(c)
+
+	status, err := client.Receiver().GetStatus(5 * time.Second)
+	checkErr(err)
+
+	if len(status.Applications) > 0 {
+		for _, app := range status.Applications {
+			fmt.Printf("[%s] %s\n", *app.DisplayName, *app.StatusText)
+		}
+	} else {
+		fmt.Println("No applications running")
+	}
+	fmt.Printf("Volume: %.2f", *status.Volume.Level)
+	if *status.Volume.Muted {
+		fmt.Print("muted\n")
+	} else {
+		fmt.Print("\n")
 	}
 }
 
