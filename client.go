@@ -68,17 +68,20 @@ func (c *Client) launchMediaApp() string {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	transportId := status.GetTransportId(controllers.NamespaceMedia)
-	if transportId != "" {
-		return transportId
+	app := status.GetSessionByAppId(AppMedia)
+	if app == nil {
+		// needs launching
+		status, err = c.receiver.LaunchApp(AppMedia, 5*time.Second)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		app = status.GetSessionByAppId(AppMedia)
 	}
-	// needs launching
-	status, err = c.receiver.LaunchApp(AppMedia, 5*time.Second)
-	if err != nil {
-		log.Fatalln(err)
+
+	if app != nil {
+		return *app.TransportId
 	}
-	transportId = status.GetTransportId(controllers.NamespaceMedia)
-	return transportId
+	return ""
 }
 
 func (c *Client) IsPlaying() bool {
@@ -86,7 +89,7 @@ func (c *Client) IsPlaying() bool {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	app := status.GetSessionByNamespace(controllers.NamespaceMedia)
+	app := status.GetSessionByAppId(AppMedia)
 	if app == nil {
 		return false
 	}

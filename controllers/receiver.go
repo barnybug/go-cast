@@ -75,12 +75,13 @@ func (s *ReceiverStatus) GetSessionByNamespace(namespace string) *ApplicationSes
 	return nil
 }
 
-func (s *ReceiverStatus) GetTransportId(namespace string) string {
-	app := s.GetSessionByNamespace(namespace)
-	if app != nil {
-		return *app.TransportId
+func (s *ReceiverStatus) GetSessionByAppId(appId string) *ApplicationSession {
+	for _, app := range s.Applications {
+		if *app.AppID == appId {
+			return app
+		}
 	}
-	return ""
+	return nil
 }
 
 type ApplicationSession struct {
