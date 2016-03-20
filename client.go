@@ -1,131 +1,108 @@
 package castv2
 
 import (
-	"crypto/tls"
-	"encoding/json"
-	"fmt"
-	"log"
 	"net"
+	"time"
 
-	"github.com/gogo/protobuf/proto"
+	"golang.org/x/net/context"
 
-	"github.com/barnybug/go-castv2/api"
+	"github.com/barnybug/go-castv2/controllers"
+	"github.com/barnybug/go-castv2/log"
+	castnet "github.com/barnybug/go-castv2/net"
 )
 
 type Client struct {
-	realConn *tls.Conn
-	conn     *packetStream
-	channels []*Channel
+	conn       *castnet.Connection
+	ctx        context.Context
+	cancel     context.CancelFunc
+	heartbeat  *controllers.HeartbeatController
+	connection *controllers.ConnectionController
+	receiver   *controllers.ReceiverController
+	media      *controllers.MediaController
 }
 
-type PayloadHeaders struct {
-	Type      string `json:"type"`
-	RequestId *int   `json:"requestId,omitempty"`
+const DefaultSender = "sender-0"
+const DefaultReceiver = "receiver-0"
+
+func NewClient() *Client {
+	return &Client{ctx: context.Background()}
 }
 
-func (h *PayloadHeaders) setRequestId(id int) {
-	h.RequestId = &id
+func (c *Client) Connect(host net.IP, port int) error {
+	c.conn = castnet.NewConnection()
+	c.conn.Connect(host, port)
+
+	ctx, cancel := context.WithCancel(c.ctx)
+	c.cancel = cancel
+
+	// connect channel
+	c.connection = controllers.NewConnectionController(c.conn, DefaultSender, DefaultReceiver)
+	c.connection.Connect()
+
+	// start heartbeat
+	c.heartbeat = controllers.NewHeartbeatController(c.conn, DefaultSender, DefaultReceiver)
+	c.heartbeat.Start(ctx)
+
+	// start receiver
+	c.receiver = controllers.NewReceiverController(c.conn, DefaultSender, DefaultReceiver)
+
+	return nil
 }
 
-func (h *PayloadHeaders) getRequestId() int {
-	return *h.RequestId
-}
-
-func NewClient(host net.IP, port int) (*Client, error) {
-
-	log.Printf("connecting to %s:%d ...", host, port)
-
-	conn, err := tls.Dial("tcp", fmt.Sprintf("%s:%d", host, port), &tls.Config{
-		InsecureSkipVerify: true,
-	})
-
-	if err != nil {
-		return nil, fmt.Errorf("Failed to connect to Chromecast. Error:%s", err)
-	}
-
-	wrapper := NewPacketStream(conn)
-
-	client := &Client{
-		realConn: conn,
-		conn:     wrapper,
-		channels: make([]*Channel, 0),
-	}
-
-	/*connection := client.NewChannel("sender-0", "receiver-0", "urn:x-cast:com.google.cast.tp.connection")
-	connection.Send(&PayloadHeaders{Type: "CONNECT"})*/
-
-	go func() {
-		for {
-			packet := wrapper.Read()
-
-			message := &api.CastMessage{}
-			err = proto.Unmarshal(*packet, message)
-			if err != nil {
-				log.Fatalf("Failed to unmarshal CastMessage: %s", err)
-			}
-
-			//spew.Dump("Message!", message)
-
-			var headers PayloadHeaders
-
-			err := json.Unmarshal([]byte(*message.PayloadUtf8), &headers)
-
-			if err != nil {
-				log.Fatalf("Failed to unmarshal message: %s", err)
-			}
-
-			for _, channel := range client.channels {
-				channel.message(message, &headers)
-			}
-
-		}
-	}()
-
-	/*go func() {
-
-		heartbeat := client.NewChannel("sender-0", "receiver-0", "urn:x-cast:com.google.cast.tp.heartbeat")
-		ping := PayloadHeaders{Type: "PING"}
-		for {
-			time.Sleep(5 * time.Second)
-			heartbeat.Send(&ping)
-		}
-	}()*/
-
-	return client, nil
+func (c *Client) NewChannel(sourceId, destinationId, namespace string) *castnet.Channel {
+	return c.conn.NewChannel(sourceId, destinationId, namespace)
 }
 
 func (c *Client) Close() {
-	c.realConn.Close()
+	c.cancel()
+	c.conn.Close()
 }
 
-func (c *Client) NewChannel(sourceId, destinationId, namespace string) *Channel {
-	channel := &Channel{
-		client:        c,
-		sourceId:      sourceId,
-		DestinationId: destinationId,
-		namespace:     namespace,
-		listeners:     make([]channelListener, 0),
-		inFlight:      make(map[int]chan *api.CastMessage),
-	}
-
-	c.channels = append(c.channels, channel)
-
-	return channel
+func (c *Client) Receiver() *controllers.ReceiverController {
+	return c.receiver
 }
 
-func (c *Client) Send(message *api.CastMessage) error {
-
-	proto.SetDefaults(message)
-
-	data, err := proto.Marshal(message)
+func (c *Client) launchMediaApp() string {
+	// get transport id
+	status, err := c.receiver.GetStatus(5 * time.Second)
 	if err != nil {
-		return err
+		log.Fatalln(err)
 	}
+	transportId := status.GetTransportId(controllers.NamespaceMedia)
+	if transportId != "" {
+		return transportId
+	}
+	// needs launching
+	status, err = c.receiver.LaunchApp(AppMedia, 5*time.Second)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	transportId = status.GetTransportId(controllers.NamespaceMedia)
+	return transportId
+}
 
-	//spew.Dump("Writing", message)
+func (c *Client) IsPlaying() bool {
+	status, err := c.receiver.GetStatus(5 * time.Second)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	app := status.GetSessionByNamespace(controllers.NamespaceMedia)
+	if app == nil {
+		return false
+	}
+	if *app.StatusText == "Ready To Cast" {
+		return false
+	}
+	return true
+}
 
-	_, err = c.conn.Write(&data)
-
-	return err
-
+func (c *Client) Media() *controllers.MediaController {
+	if c.media == nil {
+		transportId := c.launchMediaApp()
+		conn := controllers.NewConnectionController(c.conn, DefaultSender, transportId)
+		conn.Connect()
+		c.media = controllers.NewMediaController(c.conn, DefaultSender, transportId)
+		c.media.GetStatus(5 * time.Second)
+	}
+	return c.media
 }

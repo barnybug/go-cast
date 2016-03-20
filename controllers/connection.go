@@ -1,26 +1,26 @@
 package controllers
 
-import "github.com/barnybug/go-castv2"
+import "github.com/barnybug/go-castv2/net"
 
-type connectionController struct {
-	channel *castv2.Channel
+type ConnectionController struct {
+	channel *net.Channel
 }
 
-var connect = castv2.PayloadHeaders{Type: "CONNECT"}
-var close = castv2.PayloadHeaders{Type: "CLOSE"}
+var connect = net.PayloadHeaders{Type: "CONNECT"}
+var close = net.PayloadHeaders{Type: "CLOSE"}
 
-func NewConnectionController(client *castv2.Client, sourceId, destinationId string) *connectionController {
-	controller := &connectionController{
-		channel: client.NewChannel(sourceId, destinationId, "urn:x-cast:com.google.cast.tp.connection"),
+func NewConnectionController(conn *net.Connection, sourceId, destinationId string) *ConnectionController {
+	controller := &ConnectionController{
+		channel: conn.NewChannel(sourceId, destinationId, "urn:x-cast:com.google.cast.tp.connection"),
 	}
 
 	return controller
 }
 
-func (c *connectionController) Connect() {
+func (c *ConnectionController) Connect() {
 	c.channel.Send(connect)
 }
 
-func (c *connectionController) Close() {
+func (c *ConnectionController) Close() {
 	c.channel.Send(close)
 }

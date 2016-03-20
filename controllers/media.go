@@ -3,36 +3,51 @@ package controllers
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
-	"github.com/barnybug/go-castv2"
 	"github.com/barnybug/go-castv2/api"
+	"github.com/barnybug/go-castv2/net"
 )
 
 type MediaController struct {
 	interval       time.Duration
-	channel        *castv2.Channel
+	channel        *net.Channel
 	Incoming       chan []*MediaStatus
 	DestinationID  string
 	MediaSessionID int
 }
 
-var getMediaStatus = castv2.PayloadHeaders{Type: "GET_STATUS"}
+const NamespaceMedia = "urn:x-cast:com.google.cast.media"
 
-var commandMediaPlay = castv2.PayloadHeaders{Type: "PLAY"}
-var commandMediaPause = castv2.PayloadHeaders{Type: "PAUSE"}
-var commandMediaStop = castv2.PayloadHeaders{Type: "STOP"}
+var getMediaStatus = net.PayloadHeaders{Type: "GET_STATUS"}
+
+var commandMediaPlay = net.PayloadHeaders{Type: "PLAY"}
+var commandMediaPause = net.PayloadHeaders{Type: "PAUSE"}
+var commandMediaStop = net.PayloadHeaders{Type: "STOP"}
+var commandMediaLoad = net.PayloadHeaders{Type: "LOAD"}
 
 type MediaCommand struct {
-	castv2.PayloadHeaders
+	net.PayloadHeaders
 	MediaSessionID int `json:"mediaSessionId"`
 }
 
-func NewMediaController(client *castv2.Client, sourceId, destinationID string) *MediaController {
+type LoadMediaCommand struct {
+	MediaCommand
+	Media       MediaItem   `json:"media"`
+	CurrentTime int         `json:"currentTime"`
+	Autoplay    bool        `json:"autoplay"`
+	CustomData  interface{} `json:"customData"`
+}
+
+type MediaItem struct {
+	ContentId   string `json:"contentId"`
+	StreamType  string `json:"streamType"`
+	ContentType string `json:"contentType"`
+}
+
+func NewMediaController(conn *net.Connection, sourceId, destinationID string) *MediaController {
 	controller := &MediaController{
-		channel:       client.NewChannel(sourceId, destinationID, "urn:x-cast:com.google.cast.media"),
+		channel:       conn.NewChannel(sourceId, destinationID, NamespaceMedia),
 		Incoming:      make(chan []*MediaStatus, 0),
 		DestinationID: destinationID,
 	}
@@ -50,8 +65,6 @@ func (c *MediaController) SetDestinationID(id string) {
 }
 
 func (c *MediaController) onStatus(message *api.CastMessage) ([]*MediaStatus, error) {
-	spew.Dump("Got media status message", message)
-
 	response := &MediaStatusResponse{}
 
 	err := json.Unmarshal([]byte(*message.PayloadUtf8), response)
@@ -60,22 +73,25 @@ func (c *MediaController) onStatus(message *api.CastMessage) ([]*MediaStatus, er
 		return nil, fmt.Errorf("Failed to unmarshal status message:%s - %s", err, *message.PayloadUtf8)
 	}
 
+	for _, status := range response.Status {
+		c.MediaSessionID = status.MediaSessionID
+	}
+
 	select {
 	case c.Incoming <- response.Status:
 	default:
-		log.Printf("Incoming status, but we aren't listening. %v", response)
 	}
 
 	return response.Status, nil
 }
 
 type MediaStatusResponse struct {
-	castv2.PayloadHeaders
+	net.PayloadHeaders
 	Status []*MediaStatus `json:"status,omitempty"`
 }
 
 type MediaStatus struct {
-	castv2.PayloadHeaders
+	net.PayloadHeaders
 	MediaSessionID         int                    `json:"mediaSessionId"`
 	PlaybackRate           float64                `json:"playbackRate"`
 	PlayerState            string                 `json:"playerState"`
@@ -87,45 +103,55 @@ type MediaStatus struct {
 }
 
 func (c *MediaController) GetStatus(timeout time.Duration) ([]*MediaStatus, error) {
-
-	spew.Dump("getting media Status")
-
 	message, err := c.channel.Request(&getMediaStatus, timeout)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to get receiver status: %s", err)
 	}
 
-	spew.Dump("got media Status", message)
-
 	return c.onStatus(message)
 }
 
 func (c *MediaController) Play(timeout time.Duration) (*api.CastMessage, error) {
-
 	message, err := c.channel.Request(&MediaCommand{commandMediaPlay, c.MediaSessionID}, timeout)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to send play command: %s", err)
 	}
-
 	return message, nil
 }
 
 func (c *MediaController) Pause(timeout time.Duration) (*api.CastMessage, error) {
-
 	message, err := c.channel.Request(&MediaCommand{commandMediaPause, c.MediaSessionID}, timeout)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to send pause command: %s", err)
 	}
-
 	return message, nil
 }
 
 func (c *MediaController) Stop(timeout time.Duration) (*api.CastMessage, error) {
-
+	if c.MediaSessionID == 0 {
+		// no current session to stop
+		return nil, nil
+	}
 	message, err := c.channel.Request(&MediaCommand{commandMediaStop, c.MediaSessionID}, timeout)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to send stop command: %s", err)
 	}
+	return message, nil
+}
 
+func (c *MediaController) LoadMedia(media MediaItem, currentTime int, autoplay bool, customData interface{}, timeout time.Duration) (*api.CastMessage, error) {
+	message, err := c.channel.Request(&LoadMediaCommand{
+		MediaCommand: MediaCommand{
+			PayloadHeaders: commandMediaLoad,
+			MediaSessionID: c.MediaSessionID,
+		},
+		Media:       media,
+		CurrentTime: currentTime,
+		Autoplay:    autoplay,
+		CustomData:  customData,
+	}, timeout)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to send stop command: %s", err)
+	}
 	return message, nil
 }
