@@ -1,0 +1,24 @@
+language: go
+go:
+- 1.6
+sudo: false
+before_script:
+- 'mkdir -p $GOPATH/bin && wget -q https://github.com/barnybug/go-castv2/releases/download/0.0.1/upx -O $GOPATH/bin/upx && chmod +x $GOPATH/bin/upx'
+script:
+- make deps
+before_deploy:
+- make release
+deploy:
+  provider: releases
+  api_key:
+    secure: bI+aVjmuZwMcYFWa7uCE234oYsGShBUG3UTPe48Sqg5hrNmmBXvLFzRuiQrNaL9ZXvbp66dQEKYdGWuuACyjYkaFH7Do/CbOJS8n9iqyuhU9ZY1BuYYuFcPeQHaj0rIvuhzQ58dTVPm5blAfofvdUHaZ9vKksLm4HtRXe3Vk64Y3W5R5ga7Jb4xeEuvHiBaAHKiG8zhhynWcQw0dDD7xCXAqCMM3D9dqyl1bX9EZQoA7UPd2UNT95M/NM7vv0g6nVa7l0HxtsSxKpLeIEw1H2MkRZn4/or2u/3RCHxkD+TNrIq37htr+2GjZ3ma9Wfp+hi9rRvtj/dP4FC3pSuYtXDpAy49rSNXVKsjY0FC0YukMBkmmcuFTiCd0KQPvHo/dSP3dbUR3oZQkLxIMKKVj2m9derjhCv4MmdtwgWNtcFYfwsZ0W5fCc1kK3AQWATR4/Du8KJqv+fAKk2n9N148I7HINarrNUHSEDq3dya0W8J3sbXQJ4+MKEUUdq0559h1KzfynwbBfzi8/PTXEN7NISv1qcPn9l3iG+/WiUTxvpASwye7ugrYQg/vUzXhLYZ8gjfdRPk0BoXeQQ9HaD/BDopWvXD7Fg640rCx0plbtvsVGtFXQLceTXggxd4gLbTNtDmj/HqBsOWnByWYqGRgzU3ACfDQcD/FhutoX5Fz0ZI=
+  file:
+  - release/cast-linux-386
+  - release/cast-linux-amd64
+  - release/cast-linux-arm
+  - release/cast-mac-amd64
+  - release/cast-windows-386.exe
+  - release/cast-windows-amd64.exe
+  on:
+    repo: barnybug/go-castv2
+    tags: true
