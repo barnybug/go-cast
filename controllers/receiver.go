@@ -137,6 +137,9 @@ func (c *ReceiverController) LaunchApp(appId string, timeout time.Duration) (*Re
 		PayloadHeaders: commandLaunch,
 		AppId:          appId,
 	}, timeout)
+	if err != nil {
+		return nil, fmt.Errorf("Failed sending request: %s", err)
+	}
 
 	response := &StatusResponse{}
 	err = json.Unmarshal([]byte(*message.PayloadUtf8), response)

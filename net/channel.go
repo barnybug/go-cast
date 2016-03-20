@@ -2,6 +2,7 @@ package net
 
 import (
 	"fmt"
+	"sync/atomic"
 	"time"
 
 	"github.com/barnybug/go-castv2/api"
@@ -13,7 +14,7 @@ type Channel struct {
 	sourceId      string
 	DestinationId string
 	namespace     string
-	requestId     int
+	requestId     int64
 	inFlight      map[int]chan *api.CastMessage
 	listeners     []channelListener
 }
@@ -40,15 +41,13 @@ func NewChannel(conn *Connection, sourceId, destinationId, namespace string) *Ch
 }
 
 func (c *Channel) Message(message *api.CastMessage, headers *PayloadHeaders) {
-
 	if *message.DestinationId != "*" && (*message.SourceId != c.DestinationId || *message.DestinationId != c.sourceId || *message.Namespace != c.namespace) {
 		return
 	}
 
-	if *message.DestinationId != "*" && headers.RequestId != nil {
+	if headers.RequestId != nil {
 		listener, ok := c.inFlight[*headers.RequestId]
 		if !ok {
-			log.Printf("Warning: Unknown incoming response id: %d to destination:%s", *headers.RequestId, c.DestinationId)
 			return
 		}
 		listener <- message
@@ -66,7 +65,6 @@ func (c *Channel) Message(message *api.CastMessage, headers *PayloadHeaders) {
 			listener.callback(message)
 		}
 	}
-
 }
 
 func (c *Channel) OnMessage(responseType string, cb func(*api.CastMessage)) {
@@ -78,15 +76,15 @@ func (c *Channel) Send(payload interface{}) error {
 }
 
 func (c *Channel) Request(payload Payload, timeout time.Duration) (*api.CastMessage, error) {
-	c.requestId++
+	requestId := int(atomic.AddInt64(&c.requestId, 1))
 
-	payload.setRequestId(c.requestId)
+	payload.setRequestId(requestId)
 	response := make(chan *api.CastMessage)
-	c.inFlight[payload.getRequestId()] = response
+	c.inFlight[requestId] = response
 
 	err := c.Send(payload)
 	if err != nil {
-		delete(c.inFlight, payload.getRequestId())
+		delete(c.inFlight, requestId)
 		return nil, err
 	}
 
@@ -94,7 +92,7 @@ func (c *Channel) Request(payload Payload, timeout time.Duration) (*api.CastMess
 	case reply := <-response:
 		return reply, nil
 	case <-time.After(timeout):
-		delete(c.inFlight, payload.getRequestId())
+		delete(c.inFlight, requestId)
 		return nil, fmt.Errorf("Call to cast channel %s - timed out after %d seconds", c.DestinationId, timeout/time.Second)
 	}
 }
