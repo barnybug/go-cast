@@ -4,6 +4,10 @@ import "log"
 
 var Debug = false
 
+func init() {
+	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
+}
+
 func Println(v ...interface{}) {
 	if Debug {
 		log.Println(v...)
