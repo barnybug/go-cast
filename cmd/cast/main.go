@@ -42,7 +42,7 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "cast"
 	app.Usage = "Command line tool for the Chromecast"
-	app.Version = "0.0.1"
+	app.Version = cast.Version
 	app.Flags = commonFlags
 	app.Commands = []cli.Command{
 		{
