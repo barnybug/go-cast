@@ -38,7 +38,6 @@ func (c *Connection) Connect(host net.IP, port int) error {
 	c.conn, err = tls.Dial("tcp", fmt.Sprintf("%s:%d", host, port), &tls.Config{
 		InsecureSkipVerify: true,
 	})
-
 	if err != nil {
 		return fmt.Errorf("Failed to connect to Chromecast: %s", err)
 	}
