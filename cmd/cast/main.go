@@ -183,43 +183,75 @@ func checkCommand(cmd string, args []string) bool {
 		fmt.Printf("Command '%s' takes at most %d argument(s)\n", cmd, maxArgs[cmd])
 		return false
 	}
+	switch cmd {
+	case "play":
+
+	case "volume":
+		if err := validateFloat(args[0], 0.0, 1.0); err != nil {
+			fmt.Printf("Command '%s': %s\n", cmd, err)
+			return false
+		}
+
+	}
 	return true
+}
+
+func validateFloat(val string, min, max float64) error {
+	fval, err := strconv.ParseFloat(val, 64)
+	if err != nil {
+		return fmt.Errorf("Expected a number between 0.0 and 1.0")
+	}
+	if fval < min {
+		return fmt.Errorf("Value is below minimum: %.2f", min)
+	}
+	if fval > max {
+		return fmt.Errorf("Value is below maximum: %.2f", max)
+	}
+	return nil
 }
 
 func runCommand(client *castv2.Client, cmd string, args []string) {
 	switch cmd {
 	case "play":
-		media := client.Media()
+		media, err := client.Media()
+		checkErr(err)
 		url := args[0]
 		contentType := "audio/mpeg"
 		if len(args) > 1 {
 			contentType = args[1]
 		}
 		item := controllers.MediaItem{url, "BUFFERED", contentType}
-		media.LoadMedia(item, 0, true, map[string]interface{}{}, 5*time.Second)
+		_, err = media.LoadMedia(item, 0, true, map[string]interface{}{}, 5*time.Second)
+		checkErr(err)
 
 	case "pause":
-		media := client.Media()
-		media.Pause(5 * time.Second)
+		media, err := client.Media()
+		checkErr(err)
+		_, err = media.Pause(5 * time.Second)
+		checkErr(err)
 
 	case "stop":
 		if !client.IsPlaying() {
 			// if media isn't running, no media can be playing
 			return
 		}
-		media := client.Media()
-		media.Stop(5 * time.Second)
+		media, err := client.Media()
+		checkErr(err)
+		_, err = media.Stop(5 * time.Second)
+		checkErr(err)
 
 	case "volume":
 		receiver := client.Receiver()
 		level, _ := strconv.ParseFloat(args[0], 64)
 		muted := false
 		volume := controllers.Volume{Level: &level, Muted: &muted}
-		receiver.SetVolume(&volume, 5*time.Second)
+		_, err := receiver.SetVolume(&volume, 5*time.Second)
+		checkErr(err)
 
 	case "quit":
 		receiver := client.Receiver()
-		receiver.QuitApp(5 * time.Second)
+		_, err := receiver.QuitApp(5 * time.Second)
+		checkErr(err)
 
 	default:
 		fmt.Printf("Command '%s' not understood - ignored\n", cmd)

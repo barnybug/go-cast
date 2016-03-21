@@ -43,7 +43,6 @@ func (c *ReceiverController) onStatus(message *api.CastMessage) {
 	c.status = response.Status
 	select {
 	case c.Incoming <- response.Status:
-		log.Printf("Delivered status")
 	case <-time.After(time.Second):
 	}
 }

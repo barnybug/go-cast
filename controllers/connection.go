@@ -17,10 +17,10 @@ func NewConnectionController(conn *net.Connection, sourceId, destinationId strin
 	return controller
 }
 
-func (c *ConnectionController) Connect() {
-	c.channel.Send(connect)
+func (c *ConnectionController) Connect() error {
+	return c.channel.Send(connect)
 }
 
-func (c *ConnectionController) Close() {
-	c.channel.Send(close)
+func (c *ConnectionController) Close() error {
+	return c.channel.Send(close)
 }
