@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -151,7 +152,17 @@ func (c *MediaController) LoadMedia(media MediaItem, currentTime int, autoplay b
 		CustomData:  customData,
 	}, timeout)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to send stop command: %s", err)
+		return nil, fmt.Errorf("Failed to send load command: %s", err)
 	}
+
+	response := &net.PayloadHeaders{}
+	err = json.Unmarshal([]byte(*message.PayloadUtf8), response)
+	if err != nil {
+		return nil, err
+	}
+	if response.Type == "LOAD_FAILED" {
+		return nil, errors.New("Load media failed")
+	}
+
 	return message, nil
 }

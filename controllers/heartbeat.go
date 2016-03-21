@@ -10,8 +10,6 @@ import (
 	"github.com/barnybug/go-cast/net"
 )
 
-// TODO: Send pings and wait for pongs - https://github.com/thibauts/node-cast-client/blob/master/lib/controllers/heartbeat.js
-
 const interval = time.Second * 5
 const timeoutFactor = 3 // timeouts after 3 intervals
 
@@ -49,21 +47,20 @@ func (c *HeartbeatController) Start(ctx context.Context) {
 			select {
 			case <-c.ticker.C:
 				c.channel.Send(ping)
+				// TODO: handle error
 			case <-ctx.Done():
+				log.Println("Heartbeat stopped")
 				break LOOP
 			}
 		}
-		log.Println("Heartbeat stopped")
 	}()
 
 	log.Println("Heartbeat started")
 }
 
 func (c *HeartbeatController) Stop() {
-
 	if c.ticker != nil {
 		c.ticker.Stop()
 		c.ticker = nil
 	}
-
 }

@@ -1,6 +1,7 @@
 package cast
 
 import (
+	"errors"
 	"net"
 	"time"
 
@@ -65,32 +66,33 @@ func (c *Client) Receiver() *controllers.ReceiverController {
 	return c.receiver
 }
 
-func (c *Client) launchMediaApp() string {
+func (c *Client) launchMediaApp() (string, error) {
 	// get transport id
 	status, err := c.receiver.GetStatus(5 * time.Second)
 	if err != nil {
-		log.Fatalln(err)
+		return "", err
 	}
 	app := status.GetSessionByAppId(AppMedia)
 	if app == nil {
 		// needs launching
 		status, err = c.receiver.LaunchApp(AppMedia, 5*time.Second)
 		if err != nil {
-			log.Fatalln(err)
+			return "", err
 		}
 		app = status.GetSessionByAppId(AppMedia)
 	}
 
-	if app != nil {
-		return *app.TransportId
+	if app == nil {
+		return "", errors.New("Failed to get media transport")
 	}
-	return ""
+	return *app.TransportId, nil
 }
 
 func (c *Client) IsPlaying() bool {
 	status, err := c.receiver.GetStatus(5 * time.Second)
 	if err != nil {
 		log.Fatalln(err)
+		return false
 	}
 	app := status.GetSessionByAppId(AppMedia)
 	if app == nil {
@@ -102,13 +104,20 @@ func (c *Client) IsPlaying() bool {
 	return true
 }
 
-func (c *Client) Media() *controllers.MediaController {
+func (c *Client) Media() (*controllers.MediaController, error) {
 	if c.media == nil {
-		transportId := c.launchMediaApp()
+		transportId, err := c.launchMediaApp()
+		if err != nil {
+			return nil, err
+		}
 		conn := controllers.NewConnectionController(c.conn, DefaultSender, transportId)
-		conn.Connect()
+		if err := conn.Connect(); err != nil {
+			return nil, err
+		}
 		c.media = controllers.NewMediaController(c.conn, DefaultSender, transportId)
-		c.media.GetStatus(5 * time.Second)
+		if _, err := c.media.GetStatus(5 * time.Second); err != nil {
+			return nil, err
+		}
 	}
-	return c.media
+	return c.media, nil
 }
