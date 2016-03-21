@@ -3,7 +3,6 @@ package cast
 import (
 	"errors"
 	"net"
-	"time"
 
 	"golang.org/x/net/context"
 
@@ -13,6 +12,8 @@ import (
 )
 
 type Client struct {
+	host       net.IP
+	port       int
 	conn       *castnet.Connection
 	ctx        context.Context
 	cancel     context.CancelFunc
@@ -25,13 +26,17 @@ type Client struct {
 const DefaultSender = "sender-0"
 const DefaultReceiver = "receiver-0"
 
-func NewClient() *Client {
-	return &Client{ctx: context.Background()}
+func NewClient(host net.IP, port int) *Client {
+	return &Client{
+		host: host,
+		port: port,
+		ctx:  context.Background(),
+	}
 }
 
-func (c *Client) Connect(host net.IP, port int) error {
+func (c *Client) Connect(ctx context.Context) error {
 	c.conn = castnet.NewConnection()
-	err := c.conn.Connect(host, port)
+	err := c.conn.Connect(ctx, c.host, c.port)
 	if err != nil {
 		return err
 	}
@@ -66,16 +71,16 @@ func (c *Client) Receiver() *controllers.ReceiverController {
 	return c.receiver
 }
 
-func (c *Client) launchMediaApp() (string, error) {
+func (c *Client) launchMediaApp(ctx context.Context) (string, error) {
 	// get transport id
-	status, err := c.receiver.GetStatus(5 * time.Second)
+	status, err := c.receiver.GetStatus(ctx)
 	if err != nil {
 		return "", err
 	}
 	app := status.GetSessionByAppId(AppMedia)
 	if app == nil {
 		// needs launching
-		status, err = c.receiver.LaunchApp(AppMedia, 5*time.Second)
+		status, err = c.receiver.LaunchApp(ctx, AppMedia)
 		if err != nil {
 			return "", err
 		}
@@ -88,8 +93,8 @@ func (c *Client) launchMediaApp() (string, error) {
 	return *app.TransportId, nil
 }
 
-func (c *Client) IsPlaying() bool {
-	status, err := c.receiver.GetStatus(5 * time.Second)
+func (c *Client) IsPlaying(ctx context.Context) bool {
+	status, err := c.receiver.GetStatus(ctx)
 	if err != nil {
 		log.Fatalln(err)
 		return false
@@ -104,9 +109,9 @@ func (c *Client) IsPlaying() bool {
 	return true
 }
 
-func (c *Client) Media() (*controllers.MediaController, error) {
+func (c *Client) Media(ctx context.Context) (*controllers.MediaController, error) {
 	if c.media == nil {
-		transportId, err := c.launchMediaApp()
+		transportId, err := c.launchMediaApp(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -115,7 +120,7 @@ func (c *Client) Media() (*controllers.MediaController, error) {
 			return nil, err
 		}
 		c.media = controllers.NewMediaController(c.conn, DefaultSender, transportId)
-		if _, err := c.media.GetStatus(5 * time.Second); err != nil {
+		if _, err := c.media.GetStatus(ctx); err != nil {
 			return nil, err
 		}
 	}

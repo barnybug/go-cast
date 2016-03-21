@@ -1,9 +1,9 @@
 package net
 
 import (
-	"fmt"
 	"sync/atomic"
-	"time"
+
+	"golang.org/x/net/context"
 
 	"github.com/barnybug/go-cast/api"
 	"github.com/barnybug/go-cast/log"
@@ -75,7 +75,7 @@ func (c *Channel) Send(payload interface{}) error {
 	return c.conn.Send(payload, c.sourceId, c.DestinationId, c.namespace)
 }
 
-func (c *Channel) Request(payload Payload, timeout time.Duration) (*api.CastMessage, error) {
+func (c *Channel) Request(ctx context.Context, payload Payload) (*api.CastMessage, error) {
 	requestId := int(atomic.AddInt64(&c.requestId, 1))
 
 	payload.setRequestId(requestId)
@@ -91,8 +91,8 @@ func (c *Channel) Request(payload Payload, timeout time.Duration) (*api.CastMess
 	select {
 	case reply := <-response:
 		return reply, nil
-	case <-time.After(timeout):
+	case <-ctx.Done():
 		delete(c.inFlight, requestId)
-		return nil, fmt.Errorf("Call to cast channel %s - timed out after %d seconds", c.DestinationId, timeout/time.Second)
+		return nil, ctx.Err()
 	}
 }

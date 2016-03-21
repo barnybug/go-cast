@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"golang.org/x/net/context"
+
 	"github.com/barnybug/go-cast/api"
 	"github.com/barnybug/go-cast/log"
 	"github.com/barnybug/go-cast/net"
@@ -101,8 +103,8 @@ type Volume struct {
 	Muted *bool    `json:"muted,omitempty"`
 }
 
-func (c *ReceiverController) GetStatus(timeout time.Duration) (*ReceiverStatus, error) {
-	message, err := c.channel.Request(&getStatus, timeout)
+func (c *ReceiverController) GetStatus(ctx context.Context) (*ReceiverStatus, error) {
+	message, err := c.channel.Request(ctx, &getStatus)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to get receiver status: %s", err)
 	}
@@ -117,26 +119,26 @@ func (c *ReceiverController) GetStatus(timeout time.Duration) (*ReceiverStatus, 
 	return response.Status, nil
 }
 
-func (c *ReceiverController) SetVolume(volume *Volume, timeout time.Duration) (*api.CastMessage, error) {
-	return c.channel.Request(&ReceiverStatus{
+func (c *ReceiverController) SetVolume(ctx context.Context, volume *Volume) (*api.CastMessage, error) {
+	return c.channel.Request(ctx, &ReceiverStatus{
 		PayloadHeaders: net.PayloadHeaders{Type: "SET_VOLUME"},
 		Volume:         volume,
-	}, timeout)
+	})
 }
 
-func (c *ReceiverController) GetVolume(timeout time.Duration) (*Volume, error) {
-	status, err := c.GetStatus(timeout)
+func (c *ReceiverController) GetVolume(ctx context.Context) (*Volume, error) {
+	status, err := c.GetStatus(ctx)
 	if err != nil {
 		return nil, err
 	}
 	return status.Volume, err
 }
 
-func (c *ReceiverController) LaunchApp(appId string, timeout time.Duration) (*ReceiverStatus, error) {
-	message, err := c.channel.Request(&LaunchRequest{
+func (c *ReceiverController) LaunchApp(ctx context.Context, appId string) (*ReceiverStatus, error) {
+	message, err := c.channel.Request(ctx, &LaunchRequest{
 		PayloadHeaders: commandLaunch,
 		AppId:          appId,
-	}, timeout)
+	})
 	if err != nil {
 		return nil, fmt.Errorf("Failed sending request: %s", err)
 	}
@@ -149,6 +151,6 @@ func (c *ReceiverController) LaunchApp(appId string, timeout time.Duration) (*Re
 	return response.Status, nil
 }
 
-func (c *ReceiverController) QuitApp(timeout time.Duration) (*api.CastMessage, error) {
-	return c.channel.Request(&commandStop, timeout)
+func (c *ReceiverController) QuitApp(ctx context.Context) (*api.CastMessage, error) {
+	return c.channel.Request(ctx, &commandStop)
 }
