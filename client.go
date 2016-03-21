@@ -30,7 +30,10 @@ func NewClient() *Client {
 
 func (c *Client) Connect(host net.IP, port int) error {
 	c.conn = castnet.NewConnection()
-	c.conn.Connect(host, port)
+	err := c.conn.Connect(host, port)
+	if err != nil {
+		return err
+	}
 
 	ctx, cancel := context.WithCancel(c.ctx)
 	c.cancel = cancel
