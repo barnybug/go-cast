@@ -8,6 +8,8 @@ import (
 	"io"
 	"net"
 
+	"golang.org/x/net/context"
+
 	"github.com/barnybug/go-castv2/api"
 	"github.com/barnybug/go-castv2/log"
 	"github.com/gogo/protobuf/proto"
@@ -31,11 +33,15 @@ func (c *Connection) NewChannel(sourceId, destinationId, namespace string) *Chan
 	return channel
 }
 
-func (c *Connection) Connect(host net.IP, port int) error {
+func (c *Connection) Connect(ctx context.Context, host net.IP, port int) error {
 	log.Printf("Connecting to %s:%d", host, port)
 
 	var err error
-	c.conn, err = tls.Dial("tcp", fmt.Sprintf("%s:%d", host, port), &tls.Config{
+	deadline, _ := ctx.Deadline()
+	dialer := &net.Dialer{
+		Deadline: deadline,
+	}
+	c.conn, err = tls.DialWithDialer(dialer, "tcp", fmt.Sprintf("%s:%d", host, port), &tls.Config{
 		InsecureSkipVerify: true,
 	})
 	if err != nil {
@@ -129,6 +135,6 @@ func (c *Connection) Send(payload interface{}, sourceId, destinationId, namespac
 }
 
 func (c *Connection) Close() error {
-	// TODO: graceful shutdonw
+	// TODO: graceful shutdown
 	return c.conn.Close()
 }

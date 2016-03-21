@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	"golang.org/x/net/context"
+
 	"github.com/barnybug/go-castv2/api"
 	"github.com/barnybug/go-castv2/net"
 )
@@ -103,8 +105,8 @@ type MediaStatus struct {
 	IdleReason             string                 `json:"idleReason"`
 }
 
-func (c *MediaController) GetStatus(timeout time.Duration) ([]*MediaStatus, error) {
-	message, err := c.channel.Request(&getMediaStatus, timeout)
+func (c *MediaController) GetStatus(ctx context.Context) ([]*MediaStatus, error) {
+	message, err := c.channel.Request(ctx, &getMediaStatus)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to get receiver status: %s", err)
 	}
@@ -112,36 +114,36 @@ func (c *MediaController) GetStatus(timeout time.Duration) ([]*MediaStatus, erro
 	return c.onStatus(message)
 }
 
-func (c *MediaController) Play(timeout time.Duration) (*api.CastMessage, error) {
-	message, err := c.channel.Request(&MediaCommand{commandMediaPlay, c.MediaSessionID}, timeout)
+func (c *MediaController) Play(ctx context.Context) (*api.CastMessage, error) {
+	message, err := c.channel.Request(ctx, &MediaCommand{commandMediaPlay, c.MediaSessionID})
 	if err != nil {
 		return nil, fmt.Errorf("Failed to send play command: %s", err)
 	}
 	return message, nil
 }
 
-func (c *MediaController) Pause(timeout time.Duration) (*api.CastMessage, error) {
-	message, err := c.channel.Request(&MediaCommand{commandMediaPause, c.MediaSessionID}, timeout)
+func (c *MediaController) Pause(ctx context.Context) (*api.CastMessage, error) {
+	message, err := c.channel.Request(ctx, &MediaCommand{commandMediaPause, c.MediaSessionID})
 	if err != nil {
 		return nil, fmt.Errorf("Failed to send pause command: %s", err)
 	}
 	return message, nil
 }
 
-func (c *MediaController) Stop(timeout time.Duration) (*api.CastMessage, error) {
+func (c *MediaController) Stop(ctx context.Context) (*api.CastMessage, error) {
 	if c.MediaSessionID == 0 {
 		// no current session to stop
 		return nil, nil
 	}
-	message, err := c.channel.Request(&MediaCommand{commandMediaStop, c.MediaSessionID}, timeout)
+	message, err := c.channel.Request(ctx, &MediaCommand{commandMediaStop, c.MediaSessionID})
 	if err != nil {
 		return nil, fmt.Errorf("Failed to send stop command: %s", err)
 	}
 	return message, nil
 }
 
-func (c *MediaController) LoadMedia(media MediaItem, currentTime int, autoplay bool, customData interface{}, timeout time.Duration) (*api.CastMessage, error) {
-	message, err := c.channel.Request(&LoadMediaCommand{
+func (c *MediaController) LoadMedia(ctx context.Context, media MediaItem, currentTime int, autoplay bool, customData interface{}) (*api.CastMessage, error) {
+	message, err := c.channel.Request(ctx, &LoadMediaCommand{
 		MediaCommand: MediaCommand{
 			PayloadHeaders: commandMediaLoad,
 			MediaSessionID: c.MediaSessionID,
@@ -150,7 +152,7 @@ func (c *MediaController) LoadMedia(media MediaItem, currentTime int, autoplay b
 		CurrentTime: currentTime,
 		Autoplay:    autoplay,
 		CustomData:  customData,
-	}, timeout)
+	})
 	if err != nil {
 		return nil, fmt.Errorf("Failed to send load command: %s", err)
 	}

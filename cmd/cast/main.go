@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/net/context"
+
 	"github.com/barnybug/go-castv2"
 	"github.com/barnybug/go-castv2/controllers"
 	"github.com/barnybug/go-castv2/log"
@@ -37,6 +39,10 @@ func main() {
 			Name:  "port",
 			Usage: "chromecast port",
 			Value: 8009,
+		},
+		cli.DurationFlag{
+			Name:  "timeout",
+			Value: 15 * time.Second,
 		},
 	}
 	app := cli.NewApp()
@@ -88,21 +94,23 @@ func main() {
 
 func cliCommand(c *cli.Context) {
 	log.Debug = c.GlobalBool("debug")
+	ctx, cancel := context.WithTimeout(context.Background(), c.GlobalDuration("timeout"))
+	defer cancel()
 	if !checkCommand(c.Command.Name, c.Args()) {
 		return
 	}
-	client := connect(c)
-	runCommand(client, c.Command.Name, c.Args())
+	client := connect(ctx, c)
+	runCommand(ctx, client, c.Command.Name, c.Args())
 }
 
-func connect(c *cli.Context) *castv2.Client {
+func connect(ctx context.Context, c *cli.Context) *castv2.Client {
 	host := c.GlobalString("host")
 	log.Printf("Looking up %s...", host)
 	ips, err := net.LookupIP(host)
 	checkErr(err)
 
-	client := castv2.NewClient()
-	err = client.Connect(ips[0], c.GlobalInt("port"))
+	client := castv2.NewClient(ips[0], c.GlobalInt("port"))
+	err = client.Connect(ctx)
 	checkErr(err)
 
 	log.Println("Connected")
@@ -111,6 +119,8 @@ func connect(c *cli.Context) *castv2.Client {
 
 func scriptCommand(c *cli.Context) {
 	log.Debug = c.GlobalBool("debug")
+	ctx, cancel := context.WithTimeout(context.Background(), c.GlobalDuration("timeout"))
+	defer cancel()
 	scanner := bufio.NewScanner(os.Stdin)
 	commands := [][]string{}
 
@@ -125,18 +135,20 @@ func scriptCommand(c *cli.Context) {
 		commands = append(commands, args)
 	}
 
-	client := connect(c)
+	client := connect(ctx, c)
 
 	for _, args := range commands {
-		runCommand(client, args[0], args[1:])
+		runCommand(ctx, client, args[0], args[1:])
 	}
 }
 
 func statusCommand(c *cli.Context) {
 	log.Debug = c.GlobalBool("debug")
-	client := connect(c)
+	ctx, cancel := context.WithTimeout(context.Background(), c.GlobalDuration("timeout"))
+	defer cancel()
+	client := connect(ctx, c)
 
-	status, err := client.Receiver().GetStatus(5 * time.Second)
+	status, err := client.Receiver().GetStatus(ctx)
 	checkErr(err)
 
 	if len(status.Applications) > 0 {
@@ -210,10 +222,10 @@ func validateFloat(val string, min, max float64) error {
 	return nil
 }
 
-func runCommand(client *castv2.Client, cmd string, args []string) {
+func runCommand(ctx context.Context, client *castv2.Client, cmd string, args []string) {
 	switch cmd {
 	case "play":
-		media, err := client.Media()
+		media, err := client.Media(ctx)
 		checkErr(err)
 		url := args[0]
 		contentType := "audio/mpeg"
@@ -221,23 +233,23 @@ func runCommand(client *castv2.Client, cmd string, args []string) {
 			contentType = args[1]
 		}
 		item := controllers.MediaItem{url, "BUFFERED", contentType}
-		_, err = media.LoadMedia(item, 0, true, map[string]interface{}{}, 5*time.Second)
+		_, err = media.LoadMedia(ctx, item, 0, true, map[string]interface{}{})
 		checkErr(err)
 
 	case "pause":
-		media, err := client.Media()
+		media, err := client.Media(ctx)
 		checkErr(err)
-		_, err = media.Pause(5 * time.Second)
+		_, err = media.Pause(ctx)
 		checkErr(err)
 
 	case "stop":
-		if !client.IsPlaying() {
+		if !client.IsPlaying(ctx) {
 			// if media isn't running, no media can be playing
 			return
 		}
-		media, err := client.Media()
+		media, err := client.Media(ctx)
 		checkErr(err)
-		_, err = media.Stop(5 * time.Second)
+		_, err = media.Stop(ctx)
 		checkErr(err)
 
 	case "volume":
@@ -245,12 +257,12 @@ func runCommand(client *castv2.Client, cmd string, args []string) {
 		level, _ := strconv.ParseFloat(args[0], 64)
 		muted := false
 		volume := controllers.Volume{Level: &level, Muted: &muted}
-		_, err := receiver.SetVolume(&volume, 5*time.Second)
+		_, err := receiver.SetVolume(ctx, &volume)
 		checkErr(err)
 
 	case "quit":
 		receiver := client.Receiver()
-		_, err := receiver.QuitApp(5 * time.Second)
+		_, err := receiver.QuitApp(ctx)
 		checkErr(err)
 
 	default:
