@@ -5,7 +5,7 @@ sudo: false
 before_script:
 - 'mkdir -p $GOPATH/bin && wget -q https://github.com/barnybug/go-cast/releases/download/deps/upx -O $GOPATH/bin/upx && chmod +x $GOPATH/bin/upx'
 script:
-- make deps
+- make deps build
 before_deploy:
 - make release
 deploy:
