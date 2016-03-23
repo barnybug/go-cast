@@ -13,11 +13,10 @@ import (
 
 	"github.com/barnybug/go-cast"
 	"github.com/barnybug/go-cast/controllers"
+	"github.com/barnybug/go-cast/discovery"
 	"github.com/barnybug/go-cast/log"
 	"github.com/codegangsta/cli"
 )
-
-const UrnMedia = "urn:x-cast:com.google.cast.media"
 
 func checkErr(err error) {
 	if err != nil {
@@ -86,6 +85,11 @@ func main() {
 			Name:   "status",
 			Usage:  "Get status of the Chromecast",
 			Action: statusCommand,
+		},
+		{
+			Name:   "discover",
+			Usage:  "Discover Chromecast devices",
+			Action: discoverCommand,
 		},
 	}
 	app.Run(os.Args)
@@ -164,6 +168,26 @@ func statusCommand(c *cli.Context) {
 	} else {
 		fmt.Print("\n")
 	}
+}
+
+func discoverCommand(c *cli.Context) {
+	log.Debug = c.GlobalBool("debug")
+	timeout := c.GlobalDuration("timeout")
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	discover := discovery.NewService(ctx)
+	go func() {
+		for client := range discover.Found() {
+			fmt.Printf("Found: %s:%d '%s'\n", client.GetIP(), client.GetPort(), client.GetName())
+		}
+	}()
+	fmt.Printf("Running discovery for %s...\n", timeout)
+	err := discover.Run(ctx, 5*time.Second)
+	if err == context.DeadlineExceeded {
+		fmt.Println("Done")
+		return
+	}
+	checkErr(err)
 }
 
 var minArgs = map[string]int{

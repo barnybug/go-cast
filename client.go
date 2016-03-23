@@ -12,6 +12,8 @@ import (
 )
 
 type Client struct {
+	name       string
+	uuid       string
 	host       net.IP
 	port       int
 	conn       *castnet.Connection
@@ -32,6 +34,30 @@ func NewClient(host net.IP, port int) *Client {
 		port: port,
 		ctx:  context.Background(),
 	}
+}
+
+func (c *Client) GetIP() net.IP {
+	return c.host
+}
+
+func (c *Client) GetPort() int {
+	return c.port
+}
+
+func (c *Client) SetName(name string) {
+	c.name = name
+}
+
+func (c *Client) GetName() string {
+	return c.name
+}
+
+func (c *Client) SetUuid(uuid string) {
+	c.uuid = uuid
+}
+
+func (c *Client) GetUuid() string {
+	return c.uuid
 }
 
 func (c *Client) Connect(ctx context.Context) error {
