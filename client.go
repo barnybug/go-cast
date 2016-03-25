@@ -7,6 +7,7 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/barnybug/go-cast/controllers"
+	"github.com/barnybug/go-cast/events"
 	"github.com/barnybug/go-cast/log"
 	castnet "github.com/barnybug/go-cast/net"
 )
@@ -23,16 +24,21 @@ type Client struct {
 	connection *controllers.ConnectionController
 	receiver   *controllers.ReceiverController
 	media      *controllers.MediaController
+
+	Events chan events.Event
 }
 
 const DefaultSender = "sender-0"
 const DefaultReceiver = "receiver-0"
+const TransportSender = "Tr@n$p0rt-0"
+const TransportReceiver = "Tr@n$p0rt-0"
 
 func NewClient(host net.IP, port int) *Client {
 	return &Client{
-		host: host,
-		port: port,
-		ctx:  context.Background(),
+		host:   host,
+		port:   port,
+		ctx:    context.Background(),
+		Events: make(chan events.Event, 16),
 	}
 }
 
@@ -71,15 +77,17 @@ func (c *Client) Connect(ctx context.Context) error {
 	c.cancel = cancel
 
 	// connect channel
-	c.connection = controllers.NewConnectionController(c.conn, DefaultSender, DefaultReceiver)
+	c.connection = controllers.NewConnectionController(c.conn, c.Events, DefaultSender, DefaultReceiver)
 	c.connection.Connect()
 
 	// start heartbeat
-	c.heartbeat = controllers.NewHeartbeatController(c.conn, DefaultSender, DefaultReceiver)
+	c.heartbeat = controllers.NewHeartbeatController(c.conn, c.Events, TransportSender, TransportReceiver)
 	c.heartbeat.Start(ctx)
 
 	// start receiver
-	c.receiver = controllers.NewReceiverController(c.conn, DefaultSender, DefaultReceiver)
+	c.receiver = controllers.NewReceiverController(c.conn, c.Events, DefaultSender, DefaultReceiver)
+
+	c.Events <- events.Connected{}
 
 	return nil
 }
@@ -90,7 +98,10 @@ func (c *Client) NewChannel(sourceId, destinationId, namespace string) *castnet.
 
 func (c *Client) Close() {
 	c.cancel()
-	c.conn.Close()
+	if c.conn != nil {
+		c.conn.Close()
+		c.conn = nil
+	}
 }
 
 func (c *Client) Receiver() *controllers.ReceiverController {
@@ -141,11 +152,11 @@ func (c *Client) Media(ctx context.Context) (*controllers.MediaController, error
 		if err != nil {
 			return nil, err
 		}
-		conn := controllers.NewConnectionController(c.conn, DefaultSender, transportId)
+		conn := controllers.NewConnectionController(c.conn, c.Events, DefaultSender, transportId)
 		if err := conn.Connect(); err != nil {
 			return nil, err
 		}
-		c.media = controllers.NewMediaController(c.conn, DefaultSender, transportId)
+		c.media = controllers.NewMediaController(c.conn, c.Events, DefaultSender, transportId)
 		if _, err := c.media.GetStatus(ctx); err != nil {
 			return nil, err
 		}

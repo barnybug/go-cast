@@ -1,5 +1,6 @@
 package controllers
 
+import "github.com/barnybug/go-cast/events"
 import "github.com/barnybug/go-cast/net"
 
 type ConnectionController struct {
@@ -9,7 +10,7 @@ type ConnectionController struct {
 var connect = net.PayloadHeaders{Type: "CONNECT"}
 var close = net.PayloadHeaders{Type: "CLOSE"}
 
-func NewConnectionController(conn *net.Connection, sourceId, destinationId string) *ConnectionController {
+func NewConnectionController(conn *net.Connection, eventsCh chan events.Event, sourceId, destinationId string) *ConnectionController {
 	controller := &ConnectionController{
 		channel: conn.NewChannel(sourceId, destinationId, "urn:x-cast:com.google.cast.tp.connection"),
 	}

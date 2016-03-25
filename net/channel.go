@@ -45,19 +45,16 @@ func (c *Channel) Message(message *api.CastMessage, headers *PayloadHeaders) {
 		return
 	}
 
-	if headers.RequestId != nil {
-		listener, ok := c.inFlight[*headers.RequestId]
-		if !ok {
-			return
-		}
-		listener <- message
-		delete(c.inFlight, *headers.RequestId)
+	if headers.Type == "" {
+		log.Errorf("Warning: No message type. Don't know what to do. headers: %v message:%v", headers, message)
 		return
 	}
 
-	if headers.Type == "" {
-		log.Printf("Warning: No message type. Don't know what to do. headers:%v message:%v", headers, message)
-		return
+	if headers.RequestId != nil && *headers.RequestId != 0 {
+		if listener, ok := c.inFlight[*headers.RequestId]; ok {
+			listener <- message
+			delete(c.inFlight, *headers.RequestId)
+		}
 	}
 
 	for _, listener := range c.listeners {

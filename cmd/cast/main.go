@@ -14,13 +14,15 @@ import (
 	"github.com/barnybug/go-cast"
 	"github.com/barnybug/go-cast/controllers"
 	"github.com/barnybug/go-cast/discovery"
+	"github.com/barnybug/go-cast/events"
 	"github.com/barnybug/go-cast/log"
 	"github.com/codegangsta/cli"
 )
 
 func checkErr(err error) {
 	if err != nil {
-		log.Fatalln(err)
+		fmt.Println(err)
+		os.Exit(1)
 	}
 }
 
@@ -91,6 +93,11 @@ func main() {
 			Usage:  "Discover Chromecast devices",
 			Action: discoverCommand,
 		},
+		{
+			Name:   "watch",
+			Usage:  "Discover and watch  Chromecast devices for events",
+			Action: watchCommand,
+		},
 	}
 	app.Run(os.Args)
 	log.Println("Done")
@@ -113,11 +120,12 @@ func connect(ctx context.Context, c *cli.Context) *cast.Client {
 	ips, err := net.LookupIP(host)
 	checkErr(err)
 
+	fmt.Println("Connecting...")
 	client := cast.NewClient(ips[0], c.GlobalInt("port"))
 	err = client.Connect(ctx)
 	checkErr(err)
 
-	log.Println("Connected")
+	fmt.Println("Connected")
 	return client
 }
 
@@ -190,6 +198,40 @@ func discoverCommand(c *cli.Context) {
 	checkErr(err)
 }
 
+func watchCommand(c *cli.Context) {
+	log.Debug = c.GlobalBool("debug")
+	timeout := c.GlobalDuration("timeout")
+
+CONNECT:
+	for {
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		client := connect(ctx, c)
+		client.Media(ctx)
+		cancel()
+
+		for event := range client.Events {
+			switch t := event.(type) {
+			case events.Connected:
+			case events.AppStarted:
+				fmt.Printf("App started: %s [%s]\n", t.DisplayName, t.AppID)
+			case events.AppStopped:
+				fmt.Printf("App stopped: %s [%s]\n", t.DisplayName, t.AppID)
+			case events.StatusUpdated:
+				fmt.Printf("Status updated: volume %.2f [%v]\n", t.Level, t.Muted)
+			case events.Disconnected:
+				fmt.Printf("Disconnected: %s\n", t.Reason)
+				fmt.Println("Reconnecting...")
+				client.Close()
+				continue CONNECT
+			case controllers.MediaStatus:
+				fmt.Printf("Media Status: state: %s %.1fs\n", t.PlayerState, t.CurrentTime)
+			default:
+				fmt.Printf("Unknown event: %#v\n", t)
+			}
+		}
+	}
+}
+
 var minArgs = map[string]int{
 	"play":   1,
 	"pause":  0,
@@ -256,7 +298,11 @@ func runCommand(ctx context.Context, client *cast.Client, cmd string, args []str
 		if len(args) > 1 {
 			contentType = args[1]
 		}
-		item := controllers.MediaItem{url, "BUFFERED", contentType}
+		item := controllers.MediaItem{
+			ContentId:   url,
+			StreamType:  "BUFFERED",
+			ContentType: contentType,
+		}
 		_, err = media.LoadMedia(ctx, item, 0, true, map[string]interface{}{})
 		checkErr(err)
 

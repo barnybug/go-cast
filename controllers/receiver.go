@@ -8,6 +8,7 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/barnybug/go-cast/api"
+	"github.com/barnybug/go-cast/events"
 	"github.com/barnybug/go-cast/log"
 	"github.com/barnybug/go-cast/net"
 )
@@ -15,7 +16,7 @@ import (
 type ReceiverController struct {
 	interval time.Duration
 	channel  *net.Channel
-	Incoming chan *ReceiverStatus
+	eventsCh chan events.Event
 	status   *ReceiverStatus
 }
 
@@ -23,15 +24,23 @@ var getStatus = net.PayloadHeaders{Type: "GET_STATUS"}
 var commandLaunch = net.PayloadHeaders{Type: "LAUNCH"}
 var commandStop = net.PayloadHeaders{Type: "STOP"}
 
-func NewReceiverController(conn *net.Connection, sourceId, destinationId string) *ReceiverController {
+func NewReceiverController(conn *net.Connection, eventsCh chan events.Event, sourceId, destinationId string) *ReceiverController {
 	controller := &ReceiverController{
 		channel:  conn.NewChannel(sourceId, destinationId, "urn:x-cast:com.google.cast.receiver"),
-		Incoming: make(chan *ReceiverStatus, 0),
+		eventsCh: eventsCh,
 	}
 
 	controller.channel.OnMessage("RECEIVER_STATUS", controller.onStatus)
 
 	return controller
+}
+
+func (c *ReceiverController) sendEvent(event events.Event) {
+	select {
+	case c.eventsCh <- event:
+	default:
+		log.Printf("Dropped event: %#v", event)
+	}
 }
 
 func (c *ReceiverController) onStatus(message *api.CastMessage) {
@@ -42,10 +51,39 @@ func (c *ReceiverController) onStatus(message *api.CastMessage) {
 		return
 	}
 
+	previous := map[string]*ApplicationSession{}
+	if c.status != nil {
+		for _, app := range c.status.Applications {
+			previous[*app.AppID] = app
+		}
+	}
+
 	c.status = response.Status
-	select {
-	case c.Incoming <- response.Status:
-	case <-time.After(time.Second):
+	vol := response.Status.Volume
+	c.sendEvent(events.StatusUpdated{Level: *vol.Level, Muted: *vol.Muted})
+
+	for _, app := range response.Status.Applications {
+		if _, ok := previous[*app.AppID]; ok {
+			// Already running
+			delete(previous, *app.AppID)
+			continue
+		}
+		event := events.AppStarted{
+			AppID:       *app.AppID,
+			DisplayName: *app.DisplayName,
+			StatusText:  *app.StatusText,
+		}
+		c.sendEvent(event)
+	}
+
+	// Stopped apps
+	for _, app := range previous {
+		event := events.AppStopped{
+			AppID:       *app.AppID,
+			DisplayName: *app.DisplayName,
+			StatusText:  *app.StatusText,
+		}
+		c.sendEvent(event)
 	}
 }
 
