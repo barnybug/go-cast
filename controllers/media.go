@@ -130,6 +130,11 @@ type MediaStatus struct {
 	IdleReason             string                 `json:"idleReason"`
 }
 
+func (c *MediaController) Start(ctx context.Context) error {
+	_, err := c.GetStatus(ctx)
+	return err
+}
+
 func (c *MediaController) GetStatus(ctx context.Context) (*MediaStatusResponse, error) {
 	message, err := c.channel.Request(ctx, &getMediaStatus)
 	if err != nil {

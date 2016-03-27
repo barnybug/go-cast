@@ -76,16 +76,23 @@ func (c *Client) Connect(ctx context.Context) error {
 	ctx, cancel := context.WithCancel(c.ctx)
 	c.cancel = cancel
 
-	// connect channel
+	// start connection
 	c.connection = controllers.NewConnectionController(c.conn, c.Events, DefaultSender, DefaultReceiver)
-	c.connection.Connect()
+	if err := c.connection.Start(ctx); err != nil {
+		return err
+	}
 
 	// start heartbeat
 	c.heartbeat = controllers.NewHeartbeatController(c.conn, c.Events, TransportSender, TransportReceiver)
-	c.heartbeat.Start(ctx)
+	if err := c.heartbeat.Start(ctx); err != nil {
+		return err
+	}
 
 	// start receiver
 	c.receiver = controllers.NewReceiverController(c.conn, c.Events, DefaultSender, DefaultReceiver)
+	if err := c.receiver.Start(ctx); err != nil {
+		return err
+	}
 
 	c.Events <- events.Connected{}
 
@@ -153,11 +160,11 @@ func (c *Client) Media(ctx context.Context) (*controllers.MediaController, error
 			return nil, err
 		}
 		conn := controllers.NewConnectionController(c.conn, c.Events, DefaultSender, transportId)
-		if err := conn.Connect(); err != nil {
+		if err := conn.Start(ctx); err != nil {
 			return nil, err
 		}
 		c.media = controllers.NewMediaController(c.conn, c.Events, DefaultSender, transportId)
-		if _, err := c.media.GetStatus(ctx); err != nil {
+		if err := c.media.Start(ctx); err != nil {
 			return nil, err
 		}
 	}

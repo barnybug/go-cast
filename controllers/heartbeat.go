@@ -57,7 +57,7 @@ func (c *HeartbeatController) onPong(_ *api.CastMessage) {
 	atomic.StoreInt64(&c.pongs, 0)
 }
 
-func (c *HeartbeatController) Start(ctx context.Context) {
+func (c *HeartbeatController) Start(ctx context.Context) error {
 	if c.ticker != nil {
 		c.Stop()
 	}
@@ -88,6 +88,7 @@ func (c *HeartbeatController) Start(ctx context.Context) {
 	}()
 
 	log.Println("Heartbeat started")
+	return nil
 }
 
 func (c *HeartbeatController) Stop() {

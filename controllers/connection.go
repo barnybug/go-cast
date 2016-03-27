@@ -1,7 +1,10 @@
 package controllers
 
-import "github.com/barnybug/go-cast/events"
-import "github.com/barnybug/go-cast/net"
+import (
+	"github.com/barnybug/go-cast/events"
+	"github.com/barnybug/go-cast/net"
+	"golang.org/x/net/context"
+)
 
 type ConnectionController struct {
 	channel *net.Channel
@@ -18,7 +21,7 @@ func NewConnectionController(conn *net.Connection, eventsCh chan events.Event, s
 	return controller
 }
 
-func (c *ConnectionController) Connect() error {
+func (c *ConnectionController) Start(ctx context.Context) error {
 	return c.channel.Send(connect)
 }
 

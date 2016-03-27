@@ -141,6 +141,11 @@ type Volume struct {
 	Muted *bool    `json:"muted,omitempty"`
 }
 
+func (c *ReceiverController) Start(ctx context.Context) error {
+	// noop
+	return nil
+}
+
 func (c *ReceiverController) GetStatus(ctx context.Context) (*ReceiverStatus, error) {
 	message, err := c.channel.Request(ctx, &getStatus)
 	if err != nil {
