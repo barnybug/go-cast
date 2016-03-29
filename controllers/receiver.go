@@ -151,7 +151,6 @@ func (c *ReceiverController) GetStatus(ctx context.Context) (*ReceiverStatus, er
 	if err != nil {
 		return nil, fmt.Errorf("Failed to get receiver status: %s", err)
 	}
-	c.onStatus(message)
 
 	response := &StatusResponse{}
 	err = json.Unmarshal([]byte(*message.PayloadUtf8), response)

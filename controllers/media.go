@@ -64,9 +64,7 @@ func NewMediaController(conn *net.Connection, eventsCh chan events.Event, source
 		DestinationID: destinationID,
 	}
 
-	controller.channel.OnMessage("MEDIA_STATUS", func(message *api.CastMessage) {
-		controller.onStatus(message)
-	})
+	controller.channel.OnMessage("MEDIA_STATUS", controller.onStatus)
 
 	return controller
 }
