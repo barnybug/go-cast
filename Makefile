@@ -10,6 +10,9 @@ all: install
 deps:
 	go get github.com/pwaller/goupx
 
+test:
+	go test . ./api/... ./cmd/... ./controllers/... ./discovery/... ./events/... ./log/... ./net/... 
+
 build:
 	go build $(exe)
 
