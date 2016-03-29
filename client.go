@@ -2,6 +2,7 @@ package cast
 
 import (
 	"errors"
+	"fmt"
 	"net"
 
 	"golang.org/x/net/context"
@@ -42,11 +43,11 @@ func NewClient(host net.IP, port int) *Client {
 	}
 }
 
-func (c *Client) GetIP() net.IP {
+func (c *Client) IP() net.IP {
 	return c.host
 }
 
-func (c *Client) GetPort() int {
+func (c *Client) Port() int {
 	return c.port
 }
 
@@ -54,7 +55,7 @@ func (c *Client) SetName(name string) {
 	c.name = name
 }
 
-func (c *Client) GetName() string {
+func (c *Client) Name() string {
 	return c.name
 }
 
@@ -62,8 +63,12 @@ func (c *Client) SetUuid(uuid string) {
 	c.uuid = uuid
 }
 
-func (c *Client) GetUuid() string {
+func (c *Client) Uuid() string {
 	return c.uuid
+}
+
+func (c *Client) String() string {
+	return fmt.Sprintf("%s - %s:%d", c.name, c.host, c.port)
 }
 
 func (c *Client) Connect(ctx context.Context) error {

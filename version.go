@@ -1,3 +1,3 @@
 package cast
 
-var Version string /* passed in by travis build */
+var Version string = "dev" /* passed in by travis build */
