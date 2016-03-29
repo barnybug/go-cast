@@ -1,28 +1,32 @@
-hash: 49ccaf448ea0697d70bbb67aa4981280a457775bf630c3d368daf3bf387ed675
-updated: 2016-03-20T18:42:59.649524611Z
+hash: a660c6cb5ce9d31cb4f97513db71e89d75f562d0bbd2350254e6f81b7d8a779e
+updated: 2016-03-29T20:35:54.031645001+01:00
 imports:
 - name: github.com/codegangsta/cli
-  version: aca5b047ed14d17224157c3434ea93bf6cdaadee
+  version: 5bf6ffa5a6b5535ce84d7b12101e1f5757e5bd82
 - name: github.com/davecgh/go-spew
-  version: 5215b55f46b2b919f50a1df0eaa5886afe4e3b3d
+  version: 5bf6ffa5a6b5535ce84d7b12101e1f5757e5bd82
   subpackages:
   - spew
 - name: github.com/gogo/protobuf
-  version: d5d4941acc4490628827091cafee2168f8c4bc67
+  version: 5bf6ffa5a6b5535ce84d7b12101e1f5757e5bd82
   subpackages:
   - proto
 - name: github.com/hashicorp/go.net
-  version: 104dcad90073cd8d1e6828b2af19185b60cf3e29
+  version: 5bf6ffa5a6b5535ce84d7b12101e1f5757e5bd82
   subpackages:
   - ipv4
   - ipv6
   - internal/iana
 - name: github.com/hashicorp/mdns
-  version: 9d85cf22f9f8d53cb5c81c1b2749f438b2ee333f
+  version: 5bf6ffa5a6b5535ce84d7b12101e1f5757e5bd82
 - name: github.com/miekg/dns
-  version: f8964231a81dcbe9fc5f13a228c7f10a933acc50
+  version: 5bf6ffa5a6b5535ce84d7b12101e1f5757e5bd82
+- name: github.com/stretchr/testify
+  version: 6fe211e493929a8aac0469b93f28b1d0688a9a3a
+  subpackages:
+  - assert
 - name: golang.org/x/net
-  version: 35b06af0720201bc2f326773a80767387544f8c4
+  version: 5bf6ffa5a6b5535ce84d7b12101e1f5757e5bd82
   subpackages:
   - context
 devImports: []
