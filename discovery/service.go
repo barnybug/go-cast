@@ -18,15 +18,13 @@ type Service struct {
 	found     chan *cast.Client
 	entriesCh chan *mdns.ServiceEntry
 
-	foundDevices map[string]bool
 	stopPeriodic chan struct{}
 }
 
 func NewService(ctx context.Context) *Service {
 	s := &Service{
-		found:        make(chan *cast.Client),
-		entriesCh:    make(chan *mdns.ServiceEntry, 10),
-		foundDevices: make(map[string]bool),
+		found:     make(chan *cast.Client),
+		entriesCh: make(chan *mdns.ServiceEntry, 10),
 	}
 
 	go s.listener(ctx)
@@ -52,7 +50,6 @@ func (d *Service) Run(ctx context.Context, interval time.Duration) error {
 				Entries: d.entriesCh,
 			})
 		case <-ctx.Done():
-			d.foundDevices = make(map[string]bool)
 			return ctx.Err()
 		}
 	}
@@ -80,20 +77,11 @@ func (d *Service) listener(ctx context.Context) {
 		}
 
 		log.Printf("New entry: %#v\n", entry)
-		key := entry.AddrV4.String() + ":" + strconv.Itoa(entry.Port)
-
-		// Skip already found devices
-		if _, ok := d.foundDevices[key]; ok {
-			continue
-		}
-
 		client := cast.NewClient(entry.AddrV4, entry.Port)
 		client.SetName(decodeDnsEntry(name[0]))
 
 		info := decodeTxtRecord(entry.Info)
 		client.SetUuid(info["id"])
-
-		d.foundDevices[key] = true
 
 		select {
 		case d.found <- client:
