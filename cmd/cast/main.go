@@ -21,7 +21,11 @@ import (
 
 func checkErr(err error) {
 	if err != nil {
-		fmt.Println(err)
+		if err == context.DeadlineExceeded {
+			fmt.Println("Timeout exceeded")
+		} else {
+			fmt.Println(err)
+		}
 		os.Exit(1)
 	}
 }
@@ -40,6 +44,10 @@ func main() {
 			Name:  "port",
 			Usage: "chromecast port",
 			Value: 8009,
+		},
+		cli.StringFlag{
+			Name:  "name",
+			Usage: "chromecast name (required)",
 		},
 		cli.DurationFlag{
 			Name:  "timeout",
@@ -116,13 +124,44 @@ func cliCommand(c *cli.Context) {
 
 func connect(ctx context.Context, c *cli.Context) *cast.Client {
 	host := c.GlobalString("host")
-	log.Printf("Looking up %s...", host)
-	ips, err := net.LookupIP(host)
-	checkErr(err)
+	name := c.GlobalString("name")
+	if host == "" && name == "" {
+		fmt.Println("Either --host or --name is required")
+		os.Exit(1)
+	}
 
-	fmt.Println("Connecting...")
-	client := cast.NewClient(ips[0], c.GlobalInt("port"))
-	err = client.Connect(ctx)
+	var client *cast.Client
+	if host != "" {
+		log.Printf("Looking up %s...", host)
+		ips, err := net.LookupIP(host)
+		checkErr(err)
+
+		client = cast.NewClient(ips[0], c.GlobalInt("port"))
+	} else {
+		// run discovery and stop once we have find this name
+		service := discovery.NewService(ctx)
+		go service.Run(ctx, 2*time.Second)
+
+	LOOP:
+		for {
+			select {
+			case c := <-service.Found():
+				if c.Name() == name {
+					log.Printf("Found: %s at %s:%d", c.Name(), c.IP(), c.Port())
+					client = c
+					break LOOP
+				}
+			case <-ctx.Done():
+				break LOOP
+			}
+		}
+
+		// check for timeout
+		checkErr(ctx.Err())
+	}
+
+	fmt.Printf("Connecting to %s:%d...\n", client.IP(), client.Port())
+	err := client.Connect(ctx)
 	checkErr(err)
 
 	fmt.Println("Connected")

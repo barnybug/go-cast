@@ -18,19 +18,19 @@ https://github.com/barnybug/go-cast/releases/latest
 
 Play a media file:
 
-	$ cast --host chromecast play http://url/file.mp3
+	$ cast --name Hifi play http://url/file.mp3
 
 Stop playback:
 
-	$ cast --host chromecast stop
+	$ cast --name Hifi stop
 
 Set volume:
 
-	$ cast --host chromecast volume 0.5
+	$ cast --name Hifi volume 0.5
 
 Close app on the Chromecast:
 
-	$ cast --host chromecast quit
+	$ cast --name Hifi quit
 
 ## Bug reports
 

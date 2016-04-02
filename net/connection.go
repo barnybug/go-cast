@@ -34,8 +34,6 @@ func (c *Connection) NewChannel(sourceId, destinationId, namespace string) *Chan
 }
 
 func (c *Connection) Connect(ctx context.Context, host net.IP, port int) error {
-	log.Printf("Connecting to %s:%d", host, port)
-
 	var err error
 	deadline, _ := ctx.Deadline()
 	dialer := &net.Dialer{
