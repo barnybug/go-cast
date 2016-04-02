@@ -225,7 +225,7 @@ func discoverCommand(c *cli.Context) {
 	discover := discovery.NewService(ctx)
 	go func() {
 		for client := range discover.Found() {
-			fmt.Printf("Found: %s:%d '%s'\n", client.IP(), client.Port(), client.Name())
+			fmt.Printf("Found: %s:%d '%s' (%s)\n", client.IP(), client.Port(), client.Name(), client.Device())
 		}
 	}()
 	fmt.Printf("Running discovery for %s...\n", timeout)

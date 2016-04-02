@@ -15,7 +15,7 @@ import (
 
 type Client struct {
 	name       string
-	uuid       string
+	info       map[string]string
 	host       net.IP
 	port       int
 	conn       *castnet.Connection
@@ -59,12 +59,16 @@ func (c *Client) Name() string {
 	return c.name
 }
 
-func (c *Client) SetUuid(uuid string) {
-	c.uuid = uuid
+func (c *Client) SetInfo(info map[string]string) {
+	c.info = info
 }
 
 func (c *Client) Uuid() string {
-	return c.uuid
+	return c.info["id"]
+}
+
+func (c *Client) Device() string {
+	return c.info["md"]
 }
 
 func (c *Client) String() string {

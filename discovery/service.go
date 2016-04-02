@@ -81,7 +81,7 @@ func (d *Service) listener(ctx context.Context) {
 		client.SetName(decodeDnsEntry(name[0]))
 
 		info := decodeTxtRecord(entry.Info)
-		client.SetUuid(info["id"])
+		client.SetInfo(info)
 
 		select {
 		case d.found <- client:
