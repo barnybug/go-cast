@@ -18,11 +18,11 @@ https://github.com/barnybug/go-cast/releases/latest
 
 Play a media file:
 
-	$ cast --name Hifi play http://url/file.mp3
+	$ cast --name Hifi media play http://url/file.mp3
 
 Stop playback:
 
-	$ cast --name Hifi stop
+	$ cast --name Hifi media stop
 
 Set volume:
 

@@ -61,20 +61,26 @@ func main() {
 	app.Flags = commonFlags
 	app.Commands = []cli.Command{
 		{
-			Name:      "play",
-			Usage:     "play some media",
-			ArgsUsage: "play url [content type]",
-			Action:    cliCommand,
-		},
-		{
-			Name:   "stop",
-			Usage:  "stop playing",
-			Action: cliCommand,
-		},
-		{
-			Name:   "pause",
-			Usage:  "pause playing",
-			Action: cliCommand,
+			Name:  "media",
+			Usage: "media commands",
+			Subcommands: []cli.Command{
+				{
+					Name:      "play",
+					Usage:     "play some media",
+					ArgsUsage: "play url [content type]",
+					Action:    cliCommand,
+				},
+				{
+					Name:   "stop",
+					Usage:  "stop playing media",
+					Action: cliCommand,
+				},
+				{
+					Name:   "pause",
+					Usage:  "pause playing media",
+					Action: cliCommand,
+				},
+			},
 		},
 		{
 			Name:   "volume",
