@@ -71,6 +71,10 @@ func (c *Client) Device() string {
 	return c.info["md"]
 }
 
+func (c *Client) Status() string {
+	return c.info["rs"]
+}
+
 func (c *Client) String() string {
 	return fmt.Sprintf("%s - %s:%d", c.name, c.host, c.port)
 }

@@ -233,7 +233,7 @@ func discoverCommand(c *cli.Context) {
 		found := map[string]bool{}
 		for client := range discover.Found() {
 			if _, ok := found[client.Uuid()]; !ok {
-				fmt.Printf("Found: %s:%d '%s' (%s)\n", client.IP(), client.Port(), client.Name(), client.Device())
+				fmt.Printf("Found: %s:%d '%s' (%s) %s\n", client.IP(), client.Port(), client.Name(), client.Device(), client.Status())
 				found[client.Uuid()] = true
 			}
 		}
