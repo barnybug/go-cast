@@ -230,8 +230,12 @@ func discoverCommand(c *cli.Context) {
 	defer cancel()
 	discover := discovery.NewService(ctx)
 	go func() {
+		found := map[string]bool{}
 		for client := range discover.Found() {
-			fmt.Printf("Found: %s:%d '%s' (%s)\n", client.IP(), client.Port(), client.Name(), client.Device())
+			if _, ok := found[client.Uuid()]; !ok {
+				fmt.Printf("Found: %s:%d '%s' (%s)\n", client.IP(), client.Port(), client.Name(), client.Device())
+				found[client.Uuid()] = true
+			}
 		}
 	}()
 	fmt.Printf("Running discovery for %s...\n", timeout)
