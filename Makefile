@@ -14,7 +14,7 @@ test:
 	go test . ./api/... ./cmd/... ./controllers/... ./discovery/... ./events/... ./log/... ./net/... 
 
 build:
-	go build $(exe)
+	go build -i -v $(exe)
 
 install:
 	go install $(exe)
