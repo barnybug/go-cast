@@ -37,7 +37,7 @@ type MediaCommand struct {
 }
 
 type LoadMediaCommand struct {
-	MediaCommand
+	net.PayloadHeaders
 	Media       MediaItem   `json:"media"`
 	CurrentTime int         `json:"currentTime"`
 	Autoplay    bool        `json:"autoplay"`
@@ -172,14 +172,11 @@ func (c *MediaController) Stop(ctx context.Context) (*api.CastMessage, error) {
 
 func (c *MediaController) LoadMedia(ctx context.Context, media MediaItem, currentTime int, autoplay bool, customData interface{}) (*api.CastMessage, error) {
 	message, err := c.channel.Request(ctx, &LoadMediaCommand{
-		MediaCommand: MediaCommand{
-			PayloadHeaders: commandMediaLoad,
-			MediaSessionID: c.MediaSessionID,
-		},
-		Media:       media,
-		CurrentTime: currentTime,
-		Autoplay:    autoplay,
-		CustomData:  customData,
+		PayloadHeaders: commandMediaLoad,
+		Media:          media,
+		CurrentTime:    currentTime,
+		Autoplay:       autoplay,
+		CustomData:     customData,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("Failed to send load command: %s", err)
