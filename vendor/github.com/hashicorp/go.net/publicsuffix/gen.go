@@ -31,7 +31,7 @@ import (
 	"sort"
 	"strings"
 
-	"code.google.com/p/go.net/idna"
+	"github.com/hashicorp/go.net/idna"
 )
 
 const (

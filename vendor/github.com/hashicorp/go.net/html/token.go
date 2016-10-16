@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	"code.google.com/p/go.net/html/atom"
+	"github.com/hashicorp/go.net/html/atom"
 )
 
 // A TokenType is the type of a Token.

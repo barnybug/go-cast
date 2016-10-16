@@ -11,7 +11,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"code.google.com/p/go.net/html"
+	"github.com/hashicorp/go.net/html"
 	"code.google.com/p/go.text/encoding"
 	"code.google.com/p/go.text/encoding/charmap"
 	"code.google.com/p/go.text/transform"

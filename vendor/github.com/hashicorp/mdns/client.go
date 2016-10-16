@@ -158,7 +158,7 @@ func (c *client) Close() error {
 	}
 	c.closed = true
 
-	// log.Printf("[INFO] mdns: Closing client %v", *c)
+	log.Printf("[INFO] mdns: Closing client %v", *c)
 	close(c.closedCh)
 
 	if c.ipv4UnicastConn != nil {
@@ -329,7 +329,7 @@ func (c *client) recv(l *net.UDPConn, msgCh chan *dns.Msg) {
 	for !c.closed {
 		n, err := l.Read(buf)
 		if err != nil {
-			// log.Printf("[ERR] mdns: Failed to read packet: %v", err)
+			log.Printf("[ERR] mdns: Failed to read packet: %v", err)
 			continue
 		}
 		msg := new(dns.Msg)

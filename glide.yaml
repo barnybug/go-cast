@@ -7,6 +7,8 @@ import:
 - package: github.com/gogo/protobuf
   subpackages:
   - proto
+- package: github.com/hashicorp/go.net
+  repo: git@github.com:barnybug/go.net.git
 - package: github.com/hashicorp/mdns
 - package: golang.org/x/net
   subpackages:

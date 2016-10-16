@@ -1,5 +1,7 @@
-// Copyright (c) 2013, Vastech SA (PTY) LTD. All rights reserved.
-// http://github.com/gogo/protobuf/gogoproto
+// Protocol Buffers for Go with Gadgets
+//
+// Copyright (c) 2013, The GoGo Authors. All rights reserved.
+// http://github.com/gogo/protobuf
 //
 // Go support for Protocol Buffers - Google's data interchange format
 //
@@ -93,9 +95,9 @@ message Nested {
 }
 
 enum MapEnum {
-    MA = 0;
-    MB = 1;
-    MC = 2;
+  MA = 0;
+  MB = 1;
+  MC = 2;
 }
 
 message AllMaps {
@@ -151,6 +153,12 @@ message FloatingPoint {
 }
 
 message Uint128Pair {
-    bytes left = 1 [ (gogoproto.nullable) = false, (gogoproto.customtype) = "github.com/gogo/protobuf/test/custom.Uint128" ];
-    bytes right = 2 [ (gogoproto.customtype) = "github.com/gogo/protobuf/test/custom.Uint128" ];
+  bytes left = 1 [(gogoproto.nullable) = false, (gogoproto.customtype) = "github.com/gogo/protobuf/test/custom.Uint128"];
+  bytes right = 2 [(gogoproto.customtype) = "github.com/gogo/protobuf/test/custom.Uint128"];
+}
+
+message ContainsNestedMap {
+	message NestedMap {
+		map<string, double> NestedMapField = 1;
+	}
 }

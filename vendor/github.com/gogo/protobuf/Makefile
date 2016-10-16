@@ -1,7 +1,7 @@
-# Extensions for Protocol Buffers to create more go like structures.
+# Protocol Buffers for Go with Gadgets
 #
-# Copyright (c) 2013, Vastech SA (PTY) LTD. All rights reserved.
-# http://github.com/gogo/protobuf/gogoproto
+# Copyright (c) 2013, The GoGo Authors. All rights reserved.
+# http://github.com/gogo/protobuf
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
@@ -41,8 +41,10 @@ install:
 	go install ./protoc-gen-gogofast
 	go install ./protoc-gen-gogofaster
 	go install ./protoc-gen-gogoslick
+	go install ./protoc-gen-gostring
 	go install ./protoc-min-version
 	go install ./protoc-gen-combo
+	go install ./gogoreplace
 
 clean:
 	go clean ./...
@@ -60,6 +62,8 @@ regenerate:
 	make -C gogoproto regenerate
 	make -C proto/testdata regenerate
 	make -C jsonpb/jsonpb_test_proto regenerate
+	make -C _conformance regenerate
+	make -C types regenerate
 	make -C test regenerate
 	make -C test/example regenerate
 	make -C test/unrecognized regenerate
@@ -93,6 +97,11 @@ regenerate:
 	make -C test/fuzztests regenerate
 	make -C test/oneofembed regenerate
 	make -C test/asymetric-issue125 regenerate
+	make -C test/filedotname regenerate
+	make -C test/nopackage regenerate
+	make -C test/types regenerate
+	make -C test/proto3extension regenerate
+	make -C test/stdtypes regenerate
 	make gofmt
 
 tests:
@@ -104,7 +113,7 @@ vet:
 	go tool vet --shadow .
 
 errcheck:
-	go get -u github.com/kisielk/errcheck
+	go get github.com/kisielk/errcheck
 	errcheck ./test/...
 
 drone:
@@ -123,4 +132,5 @@ bench:
 contributors:
 	git log --format='%aN <%aE>' | sort -fu > CONTRIBUTORS
 
-
+update:
+	(cd protobuf && make update)

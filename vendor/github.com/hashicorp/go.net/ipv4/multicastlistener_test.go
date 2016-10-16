@@ -10,8 +10,8 @@ import (
 	"runtime"
 	"testing"
 
-	"code.google.com/p/go.net/internal/nettest"
-	"code.google.com/p/go.net/ipv4"
+	"github.com/hashicorp/go.net/internal/nettest"
+	"github.com/hashicorp/go.net/ipv4"
 )
 
 var udpMultipleGroupListenerTests = []net.Addr{
