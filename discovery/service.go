@@ -78,9 +78,8 @@ func (d *Service) listener(ctx context.Context) {
 
 		log.Printf("New entry: %#v\n", entry)
 		client := cast.NewClient(entry.AddrV4, entry.Port)
-		client.SetName(decodeDnsEntry(name[0]))
-
 		info := decodeTxtRecord(entry.Info)
+		client.SetName(info["fn"])
 		client.SetInfo(info)
 
 		select {
