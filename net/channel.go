@@ -14,6 +14,7 @@ type Channel struct {
 	sourceId      string
 	DestinationId string
 	namespace     string
+	_ int32 
 	requestId     int64
 	inFlight      map[int]chan *api.CastMessage
 	listeners     []channelListener
