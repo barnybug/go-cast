@@ -17,10 +17,10 @@ const interval = time.Second * 5
 const maxBacklog = 3
 
 type HeartbeatController struct {
+	pongs    int64
 	ticker   *time.Ticker
 	channel  *net.Channel
 	eventsCh chan events.Event
-	pongs    int64
 }
 
 var ping = net.PayloadHeaders{Type: "PING"}
