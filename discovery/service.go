@@ -1,5 +1,4 @@
-// Package discovery provides a discovery service for chromecast devices
-// Soon to be deprecated
+// Package discovery is deprecated in favor of discover.Service + mdns.Scanner
 package discovery
 
 import (
