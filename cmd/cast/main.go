@@ -13,9 +13,10 @@ import (
 
 	"github.com/barnybug/go-cast"
 	"github.com/barnybug/go-cast/controllers"
-	"github.com/barnybug/go-cast/discovery"
+	"github.com/barnybug/go-cast/discover"
 	"github.com/barnybug/go-cast/events"
 	"github.com/barnybug/go-cast/log"
+	"github.com/barnybug/go-cast/mdns"
 	"github.com/codegangsta/cli"
 )
 
@@ -128,46 +129,44 @@ func cliCommand(c *cli.Context) {
 	runCommand(ctx, client, c.Command.Name, c.Args())
 }
 
-func connect(ctx context.Context, c *cli.Context) *cast.Client {
-	host := c.GlobalString("host")
-	name := c.GlobalString("name")
-	if host == "" && name == "" {
-		fmt.Println("Either --host or --name is required")
-		os.Exit(1)
-	}
-
-	var client *cast.Client
+// getClient will try to get a cast client.
+// If host is set, it will be used (along port).
+// Otherwise, if name is set, a chromecast will be looked-up by name.
+// Otherwise the first chromecast found will be returned.
+func getClient(ctx context.Context, host string, port int, name string) (*cast.Client, error) {
 	if host != "" {
-		log.Printf("Looking up %s...", host)
+		log.Printf("Looking up by host: %s", host)
 		ips, err := net.LookupIP(host)
-		checkErr(err)
-
-		client = cast.NewClient(ips[0], c.GlobalInt("port"))
-	} else {
-		// run discovery and stop once we have find this name
-		service := discovery.NewService(ctx)
-		go service.Run(ctx, 2*time.Second)
-
-	LOOP:
-		for {
-			select {
-			case c := <-service.Found():
-				if c.Name() == name {
-					log.Printf("Found: %s at %s:%d", c.Name(), c.IP(), c.Port())
-					client = c
-					break LOOP
-				}
-			case <-ctx.Done():
-				break LOOP
-			}
+		if err != nil {
+			return nil, err
 		}
-
-		// check for timeout
-		checkErr(ctx.Err())
+		return cast.NewClient(ips[0], port), nil
 	}
 
-	fmt.Printf("Connecting to %s:%d...\n", client.IP(), client.Port())
-	err := client.Connect(ctx)
+	find := discover.Service{
+		Scanner: mdns.Scanner{
+			Timeout: 3 * time.Second,
+		},
+	}
+	if name != "" {
+		log.Printf("Looking up by name: %s", name)
+		return find.Named(ctx, name)
+	}
+	log.Printf("Looking up first")
+	return find.First(ctx)
+}
+
+func connect(ctx context.Context, c *cli.Context) *cast.Client {
+	client, err := getClient(
+		ctx,
+		c.GlobalString("host"),
+		c.GlobalInt("port"),
+		c.GlobalString("name"),
+	)
+	checkErr(err)
+	fmt.Printf("Found '%s' (%s:%d)...\n", client.Name(), client.IP(), client.Port())
+
+	err = client.Connect(ctx)
 	checkErr(err)
 
 	fmt.Println("Connected")
@@ -226,25 +225,23 @@ func statusCommand(c *cli.Context) {
 func discoverCommand(c *cli.Context) {
 	log.Debug = c.GlobalBool("debug")
 	timeout := c.GlobalDuration("timeout")
+
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	discover := discovery.NewService(ctx)
-	go func() {
-		found := map[string]bool{}
-		for client := range discover.Found() {
-			if _, ok := found[client.Uuid()]; !ok {
-				fmt.Printf("Found: %s:%d '%s' (%s) %s\n", client.IP(), client.Port(), client.Name(), client.Device(), client.Status())
-				found[client.Uuid()] = true
-			}
-		}
-	}()
-	fmt.Printf("Running discovery for %s...\n", timeout)
-	err := discover.Run(ctx, 5*time.Second)
-	if err == context.DeadlineExceeded {
-		fmt.Println("Done")
-		return
+	all := make(chan *cast.Client, 5)
+	scanner := mdns.Scanner{
+		Timeout: 3 * time.Second,
 	}
-	checkErr(err)
+	go scanner.Scan(ctx, all)
+
+	uniq := make(chan *cast.Client, 5)
+	go discover.Uniq(all, uniq)
+
+	fmt.Printf("Running scanner for %s...\n", timeout)
+	for client := range all {
+		fmt.Printf("Found: %s:%d '%s' (%s) %s\n", client.IP(), client.Port(), client.Name(), client.Device(), client.Status())
+	}
+	fmt.Println("Done")
 }
 
 func watchCommand(c *cli.Context) {
