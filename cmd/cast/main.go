@@ -13,9 +13,11 @@ import (
 
 	"github.com/barnybug/go-cast"
 	"github.com/barnybug/go-cast/controllers"
+	"github.com/barnybug/go-cast/discover"
 	"github.com/barnybug/go-cast/discovery"
 	"github.com/barnybug/go-cast/events"
 	"github.com/barnybug/go-cast/log"
+	"github.com/barnybug/go-cast/mdns"
 	"github.com/codegangsta/cli"
 )
 
@@ -226,25 +228,23 @@ func statusCommand(c *cli.Context) {
 func discoverCommand(c *cli.Context) {
 	log.Debug = c.GlobalBool("debug")
 	timeout := c.GlobalDuration("timeout")
+
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	discover := discovery.NewService(ctx)
-	go func() {
-		found := map[string]bool{}
-		for client := range discover.Found() {
-			if _, ok := found[client.Uuid()]; !ok {
-				fmt.Printf("Found: %s:%d '%s' (%s) %s\n", client.IP(), client.Port(), client.Name(), client.Device(), client.Status())
-				found[client.Uuid()] = true
-			}
-		}
-	}()
-	fmt.Printf("Running discovery for %s...\n", timeout)
-	err := discover.Run(ctx, 5*time.Second)
-	if err == context.DeadlineExceeded {
-		fmt.Println("Done")
-		return
+	all := make(chan *cast.Client, 5)
+	scanner := mdns.Scanner{
+		Timeout: 3 * time.Second,
 	}
-	checkErr(err)
+	go scanner.Scan(ctx, all)
+
+	uniq := make(chan *cast.Client, 5)
+	go discover.Uniq(all, uniq)
+
+	fmt.Printf("Running scanner for %s...\n", timeout)
+	for client := range all {
+		fmt.Printf("Found: %s:%d '%s' (%s) %s\n", client.IP(), client.Port(), client.Name(), client.Device(), client.Status())
+	}
+	fmt.Println("Done")
 }
 
 func watchCommand(c *cli.Context) {

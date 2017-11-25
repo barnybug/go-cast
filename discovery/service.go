@@ -1,4 +1,5 @@
 // Package discovery provides a discovery service for chromecast devices
+// Soon to be deprecated
 package discovery
 
 import (
