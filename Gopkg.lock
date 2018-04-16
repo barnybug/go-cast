@@ -2,11 +2,6 @@
 
 
 [[projects]]
-  name = "github.com/codegangsta/cli"
-  packages = ["."]
-  revision = "55f715e28c46073d0e217e2ce8eb46b0b45e3db6"
-
-[[projects]]
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
   revision = "6d212800a42e8ab5c146b8ace3490ee17e5225f9"
@@ -43,6 +38,12 @@
   revision = "976c720a22c8eb4eb6a0b4348ad85ad12491a506"
 
 [[projects]]
+  name = "github.com/urfave/cli"
+  packages = ["."]
+  revision = "cfb38830724cc34fedffe9a2a29fb54fa9169cd1"
+  version = "v1.20.0"
+
+[[projects]]
   name = "golang.org/x/net"
   packages = ["context"]
   revision = "8b4af36cd21a1f85a7484b49feb7c79363106d8e"
@@ -50,6 +51,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "8b8ad7a434b839d5f84602acbafae721703c8c1c8eccf8bde091f4193b6e3b91"
+  inputs-digest = "b5f91eee0545bb81f020d6e9f820ed31cb4f4eb1c4ea554c75e02428237351d2"
   solver-name = "gps-cdcl"
   solver-version = 1

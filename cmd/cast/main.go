@@ -16,7 +16,7 @@ import (
 	"github.com/barnybug/go-cast/discovery"
 	"github.com/barnybug/go-cast/events"
 	"github.com/barnybug/go-cast/log"
-	"github.com/codegangsta/cli"
+	"github.com/urfave/cli"
 )
 
 func checkErr(err error) {

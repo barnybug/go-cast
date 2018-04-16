@@ -22,7 +22,7 @@
 
 
 [[constraint]]
-  name = "github.com/codegangsta/cli"
+  name = "github.com/urfave/cli"
 
 [[constraint]]
   name = "github.com/gogo/protobuf"
