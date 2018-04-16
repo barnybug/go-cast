@@ -5,7 +5,7 @@
 package ipv6_test
 
 import (
-	"github.com/hashicorp/go.net/ipv6"
+	"code.google.com/p/go.net/ipv6"
 	"fmt"
 	"net"
 	"os"

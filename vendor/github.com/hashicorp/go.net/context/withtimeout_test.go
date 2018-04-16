@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hashicorp/go.net/context"
+	"code.google.com/p/go.net/context"
 )
 
 func ExampleWithTimeout() {
