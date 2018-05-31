@@ -25,6 +25,7 @@ type Client struct {
 	connection *controllers.ConnectionController
 	receiver   *controllers.ReceiverController
 	media      *controllers.MediaController
+	url        *controllers.URLController
 
 	Events chan events.Event
 }
@@ -128,26 +129,34 @@ func (c *Client) Receiver() *controllers.ReceiverController {
 	return c.receiver
 }
 
-func (c *Client) launchMediaApp(ctx context.Context) (string, error) {
+func (c *Client) launchApp(ctx context.Context, appId string) (string, error) {
 	// get transport id
 	status, err := c.receiver.GetStatus(ctx)
 	if err != nil {
 		return "", err
 	}
-	app := status.GetSessionByAppId(AppMedia)
+	app := status.GetSessionByAppId(appId)
 	if app == nil {
 		// needs launching
-		status, err = c.receiver.LaunchApp(ctx, AppMedia)
+		status, err = c.receiver.LaunchApp(ctx, appId)
 		if err != nil {
 			return "", err
 		}
-		app = status.GetSessionByAppId(AppMedia)
+		app = status.GetSessionByAppId(appId)
 	}
 
 	if app == nil {
-		return "", errors.New("Failed to get media transport")
+		return "", errors.New("Failed to get transport")
 	}
 	return *app.TransportId, nil
+}
+
+func (c *Client) launchMediaApp(ctx context.Context) (string, error) {
+	return c.launchApp(ctx, AppMedia)
+}
+
+func (c *Client) launchURLApp(ctx context.Context) (string, error) {
+	return c.launchApp(ctx, AppURL)
 }
 
 func (c *Client) IsPlaying(ctx context.Context) bool {
@@ -182,4 +191,19 @@ func (c *Client) Media(ctx context.Context) (*controllers.MediaController, error
 		}
 	}
 	return c.media, nil
+}
+
+func (c *Client) URL(ctx context.Context) (*controllers.URLController, error) {
+	if c.url == nil {
+		transportId, err := c.launchURLApp(ctx)
+		if err != nil {
+			return nil, err
+		}
+		conn := controllers.NewConnectionController(c.conn, c.Events, DefaultSender, transportId)
+		if err := conn.Start(ctx); err != nil {
+			return nil, err
+		}
+		c.url = controllers.NewURLController(c.conn, c.Events, DefaultSender, transportId)
+	}
+	return c.url, nil
 }

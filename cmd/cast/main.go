@@ -83,6 +83,18 @@ func main() {
 			},
 		},
 		{
+			Name:  "url",
+			Usage: "url commands (chromecast tv only)",
+			Subcommands: []cli.Command{
+				{
+					Name:      "load",
+					Usage:     "load a url",
+					ArgsUsage: "load url",
+					Action:    cliCommand,
+				},
+			},
+		},
+		{
 			Name:   "volume",
 			Usage:  "set current volume",
 			Action: cliCommand,
@@ -287,6 +299,7 @@ var minArgs = map[string]int{
 	"stop":   0,
 	"quit":   0,
 	"volume": 1,
+	"load":   1,
 }
 
 var maxArgs = map[string]int{
@@ -295,6 +308,7 @@ var maxArgs = map[string]int{
 	"stop":   0,
 	"quit":   0,
 	"volume": 1,
+	"load":   1,
 }
 
 func checkCommand(cmd string, args []string) bool {
@@ -311,8 +325,6 @@ func checkCommand(cmd string, args []string) bool {
 		return false
 	}
 	switch cmd {
-	case "play":
-
 	case "volume":
 		if err := validateFloat(args[0], 0.0, 1.0); err != nil {
 			fmt.Printf("Command '%s': %s\n", cmd, err)
@@ -377,6 +389,13 @@ func runCommand(ctx context.Context, client *cast.Client, cmd string, args []str
 		muted := false
 		volume := controllers.Volume{Level: &level, Muted: &muted}
 		_, err := receiver.SetVolume(ctx, &volume)
+		checkErr(err)
+
+	case "load":
+		controller, err := client.URL(ctx)
+		checkErr(err)
+		url := args[0]
+		_, err = controller.LoadURL(ctx, url)
 		checkErr(err)
 
 	case "quit":
