@@ -6,5 +6,9 @@ before_script:
 - 'mkdir -p $GOPATH/bin && wget -q https://github.com/barnybug/go-cast/releases/download/deps/upx -O $GOPATH/bin/upx && chmod +x $GOPATH/bin/upx'
 script:
 - make test
-after_success:
-  - test -n "$TRAVIS_TAG" && curl -sL https://git.io/goreleaser | bash
+deploy:
+- provider: script
+  skip_cleanup: true
+  script: VERSION=0.34.2 curl -sL https://git.io/goreleaser | bash
+  on:
+    tags: true

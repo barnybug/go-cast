@@ -30,5 +30,5 @@ release:
 	upx release/cast-linux-386 release/cast-linux-arm release/cast-windows-386.exe
 
 upx:
-	goupx dist/cast-linux-amd64/cast-linux-amd64
-	upx dist/cast-linux-386/cast-linux-386 dist/cast-linux-arm/cast-linux-arm dist/cast-windows-386/cast-windows-386.exe
+	goupx dist/go-cast-linux-amd64/cast-linux-amd64
+	upx dist/go-cast-linux-386/cast-linux-386 dist/go-cast-linux-arm/cast-linux-arm dist/go-cast-windows-386/cast-windows-386.exe
