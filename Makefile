@@ -3,12 +3,9 @@ export GO15VENDOREXPERIMENT=1
 exe = ./cmd/cast
 buildargs = -ldflags '-w -s -X github.com/barnybug/go-cast.Version=${TRAVIS_TAG}'
 
-.PHONY: all build install test coverage deps release
+.PHONY: all build install test coverage release upx
 
 all: install
-
-deps:
-	go get github.com/pwaller/goupx
 
 test:
 	go test . ./api/... ./cmd/... ./controllers/... ./discovery/... ./events/... ./log/... ./net/... 
@@ -30,5 +27,4 @@ release:
 	upx release/cast-linux-386 release/cast-linux-arm release/cast-windows-386.exe
 
 upx:
-	goupx dist/go-cast-linux-amd64/cast-linux-amd64
-	upx dist/go-cast-linux-386/cast-linux-386 dist/go-cast-linux-arm/cast-linux-arm dist/go-cast-windows-386/cast-windows-386.exe
+	upx dist/go-cast-linux-386/cast-linux-386 dist/go-cast-linux-amd64/cast-linux-amd64 dist/go-cast-linux-arm/cast-linux-arm dist/go-cast-windows-386/cast-windows-386.exe
