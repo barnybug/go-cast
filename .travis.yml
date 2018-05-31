@@ -9,6 +9,6 @@ script:
 deploy:
 - provider: script
   skip_cleanup: true
-  script: VERSION=0.34.2 curl -sL https://git.io/goreleaser | bash
+  script: curl -sL https://git.io/goreleaser | VERSION=0.34.2 bash
   on:
     tags: true
