@@ -32,29 +32,33 @@ func NewService(ctx context.Context) *Service {
 }
 
 func (d *Service) Run(ctx context.Context, interval time.Duration) error {
-	mdns.Query(&mdns.QueryParam{
+	err := mdns.Query(&mdns.QueryParam{
 		Service: "_googlecast._tcp",
 		Domain:  "local",
 		Timeout: interval,
 		Entries: d.entriesCh,
 	})
+	if err != nil {
+		return err
+	}
 
 	ticker := time.NewTicker(interval)
 	for {
 		select {
 		case <-ticker.C:
-			mdns.Query(&mdns.QueryParam{
+			err = mdns.Query(&mdns.QueryParam{
 				Service: "_googlecast._tcp",
 				Domain:  "local",
 				Timeout: time.Second * 3,
 				Entries: d.entriesCh,
 			})
+			if err != nil {
+				return err
+			}
 		case <-ctx.Done():
 			return ctx.Err()
 		}
 	}
-
-	return nil
 }
 
 func (d *Service) Stop() {
