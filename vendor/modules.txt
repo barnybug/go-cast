@@ -1,0 +1,29 @@
+# github.com/davecgh/go-spew v1.0.1-0.20160907170601-6d212800a42e
+## explicit
+github.com/davecgh/go-spew/spew
+# github.com/gogo/protobuf v0.0.0-20161014173244-50d1bd39ce4e
+## explicit
+github.com/gogo/protobuf/proto
+# github.com/hashicorp/go.net v0.0.0-20151006203346-104dcad90073
+## explicit
+github.com/hashicorp/go.net/internal/iana
+github.com/hashicorp/go.net/ipv4
+github.com/hashicorp/go.net/ipv6
+# github.com/hashicorp/mdns v0.0.0-20151206042412-9d85cf22f9f8
+## explicit
+github.com/hashicorp/mdns
+# github.com/miekg/dns v0.0.0-20161006100029-fc4e1e2843d8
+## explicit
+github.com/miekg/dns
+# github.com/pmezard/go-difflib v0.0.0-20151028094244-d8ed2627bdf0
+## explicit
+github.com/pmezard/go-difflib/difflib
+# github.com/stretchr/testify v1.1.5-0.20160925220609-976c720a22c8
+## explicit
+github.com/stretchr/testify/assert
+# github.com/urfave/cli v1.20.0
+## explicit
+github.com/urfave/cli
+# golang.org/x/net v0.0.0-20161013035702-8b4af36cd21a
+## explicit
+golang.org/x/net/context
