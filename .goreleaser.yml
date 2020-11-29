@@ -14,7 +14,8 @@ builds:
       - goos: darwin
         goarch: 386
     hooks:
-      post: make upx
+      post:
+      - upx "{{ .Path }}"
 
 archives:
 - name_template: "{{ .ProjectName }}-{{ .Os }}-{{ .Arch }}"
