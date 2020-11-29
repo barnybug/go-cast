@@ -15,8 +15,9 @@ builds:
         goarch: 386
     hooks:
       post: make upx
-archive:
-  name_template: "{{ .ProjectName }}-{{ .Os }}-{{ .Arch }}"
+
+archives:
+- name_template: "{{ .ProjectName }}-{{ .Os }}-{{ .Arch }}"
   format: binary
   replacements:
     darwin: mac
