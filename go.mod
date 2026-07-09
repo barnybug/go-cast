@@ -1,4 +1,4 @@
-module github.com/barnybug/go-cast
+module github.com/babailan/go-cast
 
 go 1.15
 
