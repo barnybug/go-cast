@@ -80,6 +80,9 @@ func (d *Service) listener(ctx context.Context) {
 			continue
 		}
 
+		if entry.AddrV4 == nil {
+			continue
+		}
 		log.Printf("New entry: %#v\n", entry)
 		client := cast.NewClient(entry.AddrV4, entry.Port)
 		info := decodeTxtRecord(entry.Info)
