@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"time"
 
 	"golang.org/x/net/context"
 
@@ -15,7 +14,6 @@ import (
 )
 
 type URLController struct {
-	interval      time.Duration
 	channel       *net.Channel
 	eventsCh      chan events.Event
 	DestinationID string

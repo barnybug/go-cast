@@ -3,7 +3,6 @@ package controllers
 import (
 	"encoding/json"
 	"fmt"
-	"time"
 
 	"golang.org/x/net/context"
 
@@ -14,7 +13,6 @@ import (
 )
 
 type ReceiverController struct {
-	interval time.Duration
 	channel  *net.Channel
 	eventsCh chan events.Event
 	status   *ReceiverStatus
